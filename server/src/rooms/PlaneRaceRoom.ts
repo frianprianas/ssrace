@@ -3,6 +3,15 @@ import { PlaneRaceState, Player, Coin, Enemy, Bullet } from "./schema/PlaneRaceS
 import { authenticateBaknusUser, BaknusUser } from "../auth/baknusAuth";
 import { ScoreDatabase } from "../db/scoreDatabase";
 
+// Definisi 5 Karakter Resmi Skuadron SSRace Sesuai karakter.jpg
+export const CHARACTERS_SERVER = [
+  { id: 0, name: "BAKTI", ship: "Nova Razor", colorIndex: 0 },
+  { id: 1, name: "NUSA", ship: "Triton Spear", colorIndex: 1 },
+  { id: 2, name: "BAKNUS", ship: "Veridian Claw", colorIndex: 2 },
+  { id: 3, name: "TARA", ship: "Nebula Sting", colorIndex: 3 },
+  { id: 4, name: "BEEN", ship: "Void Drifter", colorIndex: 4 }
+];
+
 interface PlayerInput {
   left: boolean;
   right: boolean;
@@ -68,6 +77,86 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     // Inisialisasi pesawat musuh (5 pesawat tempur korporat)
     this.initEnemies();
 
+    // Pemilihan Karakter Eksklusif (1 Karakter untuk 1 Pemain di dalam Room)
+    this.onMessage("select_character", (client, data: { characterId: number }) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+
+      if (this.state.status !== "waiting") {
+        client.send("character_error", { message: "Pertempuran sedang berlangsung, tidak dapat mengubah karakter!" });
+        return;
+      }
+
+      const charId = Number(data.characterId);
+      if (isNaN(charId) || charId < 0 || charId > 4) return;
+
+      // Cek apakah karakter sudah diambil oleh pemain lain di room ini
+      let takenBy = "";
+      this.state.players.forEach((other, sId) => {
+        if (sId !== client.sessionId && other.characterId === charId) {
+          takenBy = other.name;
+        }
+      });
+
+      if (takenBy) {
+        client.send("character_error", { message: `Karakter ini sudah dipilih oleh ${takenBy}!` });
+        return;
+      }
+
+      const charDef = CHARACTERS_SERVER[charId];
+      player.characterId = charId;
+      player.characterName = charDef.name;
+      player.shipName = charDef.ship;
+      player.colorIndex = charId;
+      player.isReady = true;
+
+      console.log(`[Room] ${player.name} memilih karakter: ${charDef.name} (${charDef.ship})`);
+
+      this.broadcast("character_selected", {
+        sessionId: client.sessionId,
+        playerName: player.name,
+        characterId: charId,
+        characterName: charDef.name,
+        shipName: charDef.ship
+      });
+    });
+
+    // Mulai Pertempuran (Dapat ditekan oleh SIAPA SAJA begitu seluruh pilot yang ada telah memilih karakter)
+    this.onMessage("start_game", (client) => {
+      if (this.state.status !== "waiting") return;
+
+      const totalPlayers = this.state.players.size;
+      if (totalPlayers < 1) {
+        client.send("character_error", { message: "Belum ada pemain di dalam room!" });
+        return;
+      }
+
+      let unreadyNames: string[] = [];
+      this.state.players.forEach((p) => {
+        if (p.characterId < 0) {
+          unreadyNames.push(p.name);
+        }
+      });
+
+      if (unreadyNames.length > 0) {
+        client.send("character_error", { 
+          message: `Menunggu ${unreadyNames.join(", ")} memilih karakter!` 
+        });
+        return;
+      }
+
+      const starter = this.state.players.get(client.sessionId);
+      console.log(`[Room] 🚀 START GAME ditekan oleh ${starter ? starter.name : client.sessionId}! Memulai race 120s...`);
+
+      this.state.status = "playing";
+      this.state.countdown = 120;
+      this.timerAccumulator = 0;
+
+      this.broadcast("match_started", {
+        startedBy: starter ? starter.name : "Pilot Skuadron"
+      });
+    });
+
     // Terima input pemain
     this.onMessage("input", (client, data: PlayerInput) => {
       const prev = this.prevUpDown.get(client.sessionId) || { up: false, down: false };
@@ -123,7 +212,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.hp = 5; // Bar darah per nyawa (5x tembakan sebelum 1 nyawa hilang)
     player.maxHp = 5;
     player.isEliminated = false;
-    player.invulnerableTimer = 2.0; // Kebal 2 detik saat baru join
+    player.characterId = -1; // Menunggu pemilihan karakter di Hangar
+    player.characterName = "";
+    player.shipName = "";
+    player.isReady = false;
 
     this.state.players.set(client.sessionId, player);
     this.playerInputs.set(client.sessionId, { left: false, right: false, up: false, down: false, shoot: false });
@@ -172,14 +264,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       if (!p.isEliminated) activePlayers++;
     });
 
-    if (this.state.status === "waiting") {
-      if (activePlayers >= 1) {
-        console.log("[Room] Pemain aktif terdeteksi! Memulai race survival 120s...");
-        this.state.status = "playing";
-        this.state.countdown = 120;
-        this.timerAccumulator = 0;
-      }
-    } else if (this.state.status === "playing") {
+    if (this.state.status === "playing") {
       if (activePlayers < 1) {
         console.log("[Room] Seluruh pemain tereliminasi / keluar. Mengembalikan state ke waiting...");
         this.state.status = "waiting";
@@ -902,12 +987,9 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     let active = 0;
     this.state.players.forEach(p => { if (!p.isEliminated) active++; });
 
-    if (active >= 2) {
-      this.state.status = "playing";
-    } else {
-      this.state.status = "waiting";
-    }
+    // Selalu kembali ke Hangar (status waiting) agar pemain dapat konfirmasi/ganti karakter dan klik START
+    this.state.status = "waiting";
 
-    console.log("[Room] Ronde baru survival dimulai!");
+    console.log("[Room] Ronde baru disiapkan, kembali ke Hangar Skuadron!");
   }
 }

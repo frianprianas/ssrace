@@ -26,6 +26,10 @@ export class Player extends Schema {
   @type("boolean") isEliminated: boolean = false;
   @type("number") invulnerableTimer: number = 0; // Kebal saat baru tertabrak/tertembak
   @type("number") colorIndex: number = 0;
+  @type("number") characterId: number = -1; // -1: belum pilih, 0: BAKTI, 1: NUSA, 2: BAKNUS, 3: TARA, 4: BEEN
+  @type("string") characterName: string = "";
+  @type("string") shipName: string = "";
+  @type("boolean") isReady: boolean = false;
 }
 
 export class Coin extends Schema {

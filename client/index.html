@@ -225,6 +225,39 @@
     </div>
   </div>
 
+  <!-- Modal Hangar & Pemilihan Karakter Skuadron (Maks 5 Pilot Sesuai karakter.jpg) -->
+  <div id="hangar-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-hangar">
+      <div class="modal-header hangar-modal-header">
+        <div class="hangar-badge-row">
+          <span class="badge-satire" id="hangar-sector-badge">SEKTOR 1 • HANGAR SKUADRON</span>
+          <span class="hangar-ready-pill" id="hangar-ready-pill">👥 Pilot Siap: 0/0</span>
+        </div>
+        <h2>Pilih Karakter & Pesawat Tempur</h2>
+        <p>Masing-masing pilot (maks 5) memilih satu karakter unik dari 5 pilot resmi. Setelah seluruh pilot di sektor ini siap, siapa saja dapat menekan tombol START!</p>
+      </div>
+
+      <!-- 5 Kartu Karakter Grid -->
+      <div class="character-selection-grid" id="character-selection-grid">
+        <!-- 5 Kartu Pilot di-render dinamis oleh main.ts -->
+      </div>
+
+      <!-- Footer Hangar: Status & Tombol Start Battle -->
+      <div class="hangar-footer">
+        <div class="hangar-status-panel">
+          <div class="hangar-status-title" id="hangar-status-title">MENUNGGU PILIHAN KARAKTER</div>
+          <div class="hangar-status-desc" id="hangar-status-desc">Silakan klik salah satu karakter pilot di atas untuk memilih pesawat tempur Anda.</div>
+        </div>
+        <div class="hangar-actions">
+          <button id="btn-leave-hangar" class="btn-secondary">🚪 KELUAR KE LOBBY</button>
+          <button id="btn-start-battle" class="btn-primary btn-start-battle" disabled>
+            🚀 MULAI PERTEMPURAN (START)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

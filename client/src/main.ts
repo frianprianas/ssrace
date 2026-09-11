@@ -241,6 +241,202 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const CHARACTERS = [
+    {
+      id: 0,
+      name: "BAKTI",
+      ship: "Nova Razor",
+      color: "#dc2626",
+      accent: "#ef4444",
+      role: "Assault Interceptor",
+      desc: "Jet tempur sergap agresif bersenjata meriam kembar berdaya ledak tinggi.",
+      portrait: "/characters/char_0.jpg"
+    },
+    {
+      id: 1,
+      name: "NUSA",
+      ship: "Triton Spear",
+      color: "#2563eb",
+      accent: "#38bdf8",
+      role: "Tactical Vanguard",
+      desc: "Spesialis manuver presisi dengan perisai medan gaya biru terintegrasi.",
+      portrait: "/characters/char_1.jpg"
+    },
+    {
+      id: 2,
+      name: "BAKNUS",
+      ship: "Veridian Claw",
+      color: "#16a34a",
+      accent: "#22c55e",
+      role: "Heavy Dreadnought",
+      desc: "Lambung titanium berlapis tebal dengan ketahanan benturan maksimal.",
+      portrait: "/characters/char_2.jpg"
+    },
+    {
+      id: 3,
+      name: "TARA",
+      ship: "Nebula Sting",
+      color: "#eab308",
+      accent: "#f59e0b",
+      role: "Energy Harvester",
+      desc: "Dilengkapi penyerap inti plasma frekuensi tinggi untuk serapan energi kilat.",
+      portrait: "/characters/char_3.jpg"
+    },
+    {
+      id: 4,
+      name: "BEEN",
+      ship: "Void Drifter",
+      color: "#9333ea",
+      accent: "#a855f7",
+      role: "Void Infiltrator",
+      desc: "Memanfaatkan distorsi ruang ungu untuk kelincahan dan daya tembak mengejutkan.",
+      portrait: "/characters/char_4.jpg"
+    }
+  ];
+
+  // DOM Elements Hangar & Pemilihan Karakter
+  const modalHangar = document.getElementById("hangar-modal") as HTMLDivElement;
+  const hangarSectorBadge = document.getElementById("hangar-sector-badge") as HTMLSpanElement;
+  const hangarReadyPill = document.getElementById("hangar-ready-pill") as HTMLSpanElement;
+  const charSelectionGrid = document.getElementById("character-selection-grid") as HTMLDivElement;
+  const hangarStatusTitle = document.getElementById("hangar-status-title") as HTMLDivElement;
+  const hangarStatusDesc = document.getElementById("hangar-status-desc") as HTMLDivElement;
+  const btnLeaveHangar = document.getElementById("btn-leave-hangar") as HTMLButtonElement;
+  const btnStartBattle = document.getElementById("btn-start-battle") as HTMLButtonElement;
+
+  let activeColyseusRoom: any = null;
+
+  const renderHangarCards = () => {
+    if (!activeColyseusRoom || !charSelectionGrid) return;
+    const room = activeColyseusRoom;
+    const state = room.state;
+    if (!state || !state.players) return;
+
+    let readyCount = 0;
+    const totalPlayers = state.players.size;
+
+    state.players.forEach((p: any) => {
+      if (p.characterId >= 0) readyCount++;
+    });
+
+    if (hangarReadyPill) {
+      hangarReadyPill.innerText = `👥 Pilot Siap: ${readyCount}/${totalPlayers} Pilot`;
+    }
+
+    const myPlayer = state.players.get(room.sessionId);
+    const myCharId = myPlayer ? myPlayer.characterId : -1;
+
+    charSelectionGrid.innerHTML = CHARACTERS.map((char) => {
+      const isMine = (myCharId === char.id);
+      let takenByOtherName = "";
+
+      state.players.forEach((p: any, sId: string) => {
+        if (sId !== room.sessionId && p.characterId === char.id) {
+          takenByOtherName = p.name;
+        }
+      });
+
+      const isTaken = !!takenByOtherName;
+      let cardClass = "";
+      let btnClass = "char-btn-free";
+      let btnLabel = "PILIH PILOT";
+
+      if (isMine) {
+        cardClass = "char-card-selected";
+        btnClass = "char-btn-mine";
+        btnLabel = "★ PILOT ANDA";
+      } else if (isTaken) {
+        cardClass = "char-card-taken";
+        btnClass = "char-btn-taken";
+        btnLabel = `🔒 DIPILIH: ${takenByOtherName.substring(0, 8)}`;
+      }
+
+      return `
+        <div class="char-card ${cardClass}" data-char-id="${char.id}" style="--char-glow: ${char.accent}; --char-shadow: ${char.color}40;">
+          <div class="char-img-container">
+            <img src="${char.portrait}" alt="${char.name}" class="char-portrait" loading="lazy">
+            <div class="char-img-overlay"></div>
+            <span class="char-badge-id">#0${char.id + 1}</span>
+          </div>
+          <div class="char-info-body">
+            <h3 class="char-name-title" style="color: ${char.accent};">${char.name}</h3>
+            <div class="char-ship-name">🚀 ${char.ship}</div>
+            <span class="char-role-tag">${char.role}</span>
+            <p class="char-desc-text">${char.desc}</p>
+            <div class="char-select-btn ${btnClass}">
+              ${btnLabel}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Pasang click listener ke kartu karakter
+    charSelectionGrid.querySelectorAll(".char-card").forEach((elem) => {
+      elem.addEventListener("click", () => {
+        sounds.unlockAudio();
+        const charId = parseInt(elem.getAttribute("data-char-id") || "-1");
+        if (charId < 0 || elem.classList.contains("char-card-taken")) return;
+        room.send("select_character", { characterId: charId });
+      });
+    });
+
+    // Update status footer & tombol START
+    if (totalPlayers > 0 && readyCount === totalPlayers) {
+      if (btnStartBattle) {
+        btnStartBattle.disabled = false;
+        btnStartBattle.innerText = "🚀 MULAI PERTEMPURAN (START)";
+      }
+      if (hangarStatusTitle) {
+        hangarStatusTitle.innerText = "SEMUA PILOT TELAH SIAP!";
+        hangarStatusTitle.style.color = "#10b981";
+      }
+      if (hangarStatusDesc) {
+        hangarStatusDesc.innerText = "Seluruh pilot skuadron telah memilih karakter. Siapa saja dapat menekan tombol START untuk meluncur!";
+      }
+    } else {
+      if (btnStartBattle) {
+        btnStartBattle.disabled = true;
+        btnStartBattle.innerText = "⏳ MENUNGGU SEMUA PILOT SIAP";
+      }
+      if (hangarStatusTitle) {
+        hangarStatusTitle.style.color = "#38bdf8";
+        if (myCharId < 0) {
+          hangarStatusTitle.innerText = "PILIH KARAKTER ANDA";
+        } else {
+          hangarStatusTitle.innerText = "MENUNGGU REKAN PILOT LAIN";
+        }
+      }
+      if (hangarStatusDesc) {
+        if (myCharId < 0) {
+          hangarStatusDesc.innerText = "Klik salah satu kartu pilot di atas yang masih tersedia untuk memilih pesawat Anda.";
+        } else {
+          hangarStatusDesc.innerText = `Menunggu ${totalPlayers - readyCount} pilot lain memilih karakter unik masing-masing...`;
+        }
+      }
+    }
+  };
+
+  if (btnStartBattle) {
+    btnStartBattle.addEventListener("click", () => {
+      sounds.unlockAudio();
+      if (activeColyseusRoom) {
+        activeColyseusRoom.send("start_game");
+      }
+    });
+  }
+
+  if (btnLeaveHangar) {
+    btnLeaveHangar.addEventListener("click", () => {
+      sounds.unlockAudio();
+      if (modalHangar) modalHangar.style.display = "none";
+      const scene = game.scene.getScene("GameScene") as GameScene;
+      if (scene) scene.cleanupEntities();
+      activeColyseusRoom = null;
+      showLobby(true);
+    });
+  }
+
   const joinRoom = async (roomNumber: number) => {
     if (!currentAuthData) return;
     selectedRoomNumber = roomNumber;
@@ -248,14 +444,57 @@ window.addEventListener("DOMContentLoaded", () => {
     showModal(false);
 
     if (btnChangeRoom) btnChangeRoom.style.display = "inline-block";
-    if (touchControls) touchControls.style.display = "flex";
 
     try {
       const scene = game.scene.getScene("GameScene") as GameScene;
       if (scene) {
-        await scene.connectToServer({
+        const conn = await scene.connectToServer({
           ...currentAuthData,
           roomNumber: selectedRoomNumber
+        });
+
+        activeColyseusRoom = conn.room;
+
+        if (hangarSectorBadge) {
+          hangarSectorBadge.innerText = `SEKTOR ${selectedRoomNumber} • HANGAR SKUADRON`;
+        }
+
+        // Cek status room
+        if (activeColyseusRoom.state.status === "waiting") {
+          if (modalHangar) modalHangar.style.display = "flex";
+          if (touchControls) touchControls.style.display = "none";
+          renderHangarCards();
+        } else {
+          if (modalHangar) modalHangar.style.display = "none";
+          if (touchControls) touchControls.style.display = "flex";
+        }
+
+        activeColyseusRoom.state.onChange(() => {
+          if (activeColyseusRoom.state.status === "waiting") {
+            if (modalHangar) modalHangar.style.display = "flex";
+            if (touchControls) touchControls.style.display = "none";
+            renderHangarCards();
+          } else if (activeColyseusRoom.state.status === "playing") {
+            if (modalHangar) modalHangar.style.display = "none";
+            if (touchControls) touchControls.style.display = "flex";
+          }
+        });
+
+        activeColyseusRoom.state.players.onAdd(() => renderHangarCards());
+        activeColyseusRoom.state.players.onRemove(() => renderHangarCards());
+
+        activeColyseusRoom.onMessage("character_selected", () => {
+          renderHangarCards();
+        });
+
+        activeColyseusRoom.onMessage("character_error", (data: any) => {
+          alert(data.message || "Gagal memilih karakter.");
+        });
+
+        activeColyseusRoom.onMessage("match_started", () => {
+          if (modalHangar) modalHangar.style.display = "none";
+          if (touchControls) touchControls.style.display = "flex";
+          sounds.playLaser();
         });
       }
     } catch (e: any) {
@@ -275,6 +514,8 @@ window.addEventListener("DOMContentLoaded", () => {
   if (btnChangeRoom) {
     btnChangeRoom.addEventListener("click", () => {
       sounds.unlockAudio();
+      if (modalHangar) modalHangar.style.display = "none";
+      activeColyseusRoom = null;
       const scene = game.scene.getScene("GameScene") as GameScene;
       if (scene) {
         scene.cleanupEntities();

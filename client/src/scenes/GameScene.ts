@@ -200,50 +200,98 @@ export class GameScene extends Phaser.Scene {
    * Pembuatan tekstur grafis prosedural berkualitas tinggi (Zero byte eksternal)
    */
   private createProceduralTextures() {
-    // 1. Pesawat Pemain Lokal (Cyber Cyan Interceptor)
-    const gPlayer = this.make.graphics({ x: 0, y: 0 });
-    gPlayer.fillStyle(0x00f0ff, 1);
-    gPlayer.fillTriangle(16, 0, 0, 30, 7, 22);
-    gPlayer.fillTriangle(16, 0, 25, 22, 32, 30);
-    gPlayer.fillStyle(0xffffff, 1);
-    gPlayer.fillTriangle(16, 2, 9, 25, 23, 25);
-    gPlayer.fillStyle(0x0077ff, 1);
-    gPlayer.fillRect(13, 8, 6, 12);
-    gPlayer.fillStyle(0x38bdf8, 1);
-    gPlayer.fillCircle(16, 12, 3.5);
-    gPlayer.generateTexture("space_jet_local", 32, 32);
-
-    // 2. Pesawat Pemain Lain (5 Palet Warna Kontras)
-    const palettes = [
-      { wing: 0xd97706, body: 0xffedd5, accent: 0xf59e0b }, // Solar Amber
-      { wing: 0x059669, body: 0xd1fae5, accent: 0x10b981 }, // Cyber Emerald
-      { wing: 0x7c3aed, body: 0xede9fe, accent: 0xa855f7 }, // Royal Amethyst
-      { wing: 0xe11d48, body: 0xffe4e6, accent: 0xf43f5e }, // Crimson Rose
-      { wing: 0x0891b2, body: 0xcffafe, accent: 0x06b6d4 }  // Electric Blue
+    // 1. Pesawat 5 Karakter Skuadron SSRace Sesuai karakter.jpg:
+    // 0: BAKTI (Nova Razor - Red Crimson)
+    // 1: NUSA (Triton Spear - Blue Azure)
+    // 2: BAKNUS (Veridian Claw - Green Emerald)
+    // 3: TARA (Nebula Sting - Golden Amber)
+    // 4: BEEN (Void Drifter - Purple Violet)
+    const characterConfigs = [
+      { // 0: BAKTI - Nova Razor
+        wing: 0xdc2626, body: 0xffffff, accent: 0xef4444, canard: 0x991b1b, cockpit: 0xff4500, trim: 0xfca5a5, exhaust: 0xff3300
+      },
+      { // 1: NUSA - Triton Spear
+        wing: 0x2563eb, body: 0xe0f2fe, accent: 0x38bdf8, canard: 0x1e3a8a, cockpit: 0x00f0ff, trim: 0x93c5fd, exhaust: 0x00f0ff
+      },
+      { // 2: BAKNUS - Veridian Claw
+        wing: 0x16a34a, body: 0x1e293b, accent: 0x22c55e, canard: 0x14532d, cockpit: 0x86efac, trim: 0x4ade80, exhaust: 0x22c55e
+      },
+      { // 3: TARA - Nebula Sting
+        wing: 0xeab308, body: 0xfef08a, accent: 0xf59e0b, canard: 0x78350f, cockpit: 0xffffff, trim: 0xfde047, exhaust: 0xfacc15
+      },
+      { // 4: BEEN - Void Drifter
+        wing: 0x9333ea, body: 0x1e1b4b, accent: 0xa855f7, canard: 0x3b0764, cockpit: 0xd8b4fe, trim: 0xc084fc, exhaust: 0xd946ef
+      }
     ];
 
-    palettes.forEach((pal, idx) => {
+    characterConfigs.forEach((c, idx) => {
       const g = this.make.graphics({ x: 0, y: 0 });
-      g.fillStyle(pal.wing, 1);
-      g.fillTriangle(16, 0, 0, 30, 8, 22);
-      g.fillTriangle(16, 0, 24, 22, 32, 30);
-      g.fillStyle(pal.body, 1);
-      g.fillTriangle(16, 2, 9, 26, 23, 26);
-      g.fillStyle(pal.accent, 1);
-      g.fillRect(14, 10, 4, 12);
-      g.fillCircle(16, 12, 3.5);
-      g.generateTexture(`space_jet_remote_${idx}`, 32, 32);
+
+      // Sayap Luar Pesawat
+      g.fillStyle(c.wing, 1);
+      g.fillTriangle(18, 0, 0, 32, 9, 24);
+      g.fillTriangle(18, 0, 27, 24, 36, 32);
+
+      // Canards / Sirip Depan
+      g.fillStyle(c.canard, 1);
+      g.fillTriangle(18, 4, 4, 18, 10, 18);
+      g.fillTriangle(18, 4, 26, 18, 32, 18);
+
+      // Bodi Tengah / Sasis Utama
+      g.fillStyle(c.body, 1);
+      g.fillTriangle(18, 2, 10, 28, 26, 28);
+
+      // Aksen Garis & Pelat Armor
+      g.fillStyle(c.accent, 1);
+      g.fillRect(15, 10, 6, 14);
+
+      // Kokpit Helm Pilot Sesuai Karakter
+      g.fillStyle(c.cockpit, 1);
+      g.fillCircle(18, 14, 4);
+
+      // Detail Moncong Laser Kembar
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(10, 26, 2, 6);
+      g.fillRect(24, 26, 2, 6);
+
+      // Garis Aksen Trim
+      g.lineStyle(1.5, c.trim, 0.9);
+      g.lineBetween(18, 4, 18, 26);
+
+      g.generateTexture(`character_ship_${idx}`, 36, 36);
+
+      // Exhaust Api Mesin Spesifik Karakter
+      const gEx = this.make.graphics({ x: 0, y: 0 });
+      gEx.fillStyle(c.exhaust, 0.95);
+      gEx.fillTriangle(2, 0, 0, 10, 4, 10);
+      gEx.fillTriangle(8, 0, 6, 10, 10, 10);
+      gEx.fillStyle(0xffffff, 1);
+      gEx.fillTriangle(2, 0, 1, 6, 3, 6);
+      gEx.fillTriangle(8, 0, 7, 6, 9, 6);
+      gEx.generateTexture(`exhaust_flame_${idx}`, 12, 10);
     });
 
-    // 3. Exhaust Api Mesin Pemain (Menghadap Bawah)
-    const gExhaust = this.make.graphics({ x: 0, y: 0 });
-    gExhaust.fillStyle(0x00f0ff, 0.9);
-    gExhaust.fillTriangle(2, 0, 0, 10, 4, 10);
-    gExhaust.fillTriangle(8, 0, 6, 10, 10, 10);
-    gExhaust.fillStyle(0xffffff, 1);
-    gExhaust.fillTriangle(2, 0, 1, 6, 3, 6);
-    gExhaust.fillTriangle(8, 0, 7, 6, 9, 6);
-    gExhaust.generateTexture("exhaust_flame", 12, 10);
+    // Fallback space_jet_local dan exhaust_flame
+    const gDefault = this.make.graphics({ x: 0, y: 0 });
+    gDefault.fillStyle(0x00f0ff, 1);
+    gDefault.fillTriangle(18, 0, 0, 32, 9, 24);
+    gDefault.fillTriangle(18, 0, 27, 24, 36, 32);
+    gDefault.fillStyle(0xffffff, 1);
+    gDefault.fillTriangle(18, 2, 10, 28, 26, 28);
+    gDefault.fillStyle(0x0077ff, 1);
+    gDefault.fillRect(15, 10, 6, 14);
+    gDefault.fillStyle(0x38bdf8, 1);
+    gDefault.fillCircle(18, 14, 4);
+    gDefault.generateTexture("space_jet_local", 36, 36);
+
+    const gExFallback = this.make.graphics({ x: 0, y: 0 });
+    gExFallback.fillStyle(0x00f0ff, 0.9);
+    gExFallback.fillTriangle(2, 0, 0, 10, 4, 10);
+    gExFallback.fillTriangle(8, 0, 6, 10, 10, 10);
+    gExFallback.fillStyle(0xffffff, 1);
+    gExFallback.fillTriangle(2, 0, 1, 6, 3, 6);
+    gExFallback.fillTriangle(8, 0, 7, 6, 9, 6);
+    gExFallback.generateTexture("exhaust_flame", 12, 10);
 
     // 4. Exhaust Api Mesin Pesawat Musuh (Menghadap Atas)
     const gEnemyExhaust = this.make.graphics({ x: 0, y: 0 });
@@ -740,19 +788,24 @@ export class GameScene extends Phaser.Scene {
     // 1. Sinkronisasi Pemain (Players)
     this.room.state.players.onAdd((player: any, sessionId: string) => {
       const isLocal = sessionId === this.room.sessionId;
-      const textureKey = isLocal ? "space_jet_local" : `space_jet_remote_${player.colorIndex || 0}`;
+      const charId = (player.characterId >= 0 && player.characterId <= 4) ? player.characterId : (player.colorIndex % 5);
+      const textureKey = `character_ship_${charId}`;
+      const exhaustKey = `exhaust_flame_${charId}`;
 
       const container = this.add.container(player.x, player.y).setDepth(30);
 
-      // A. PENANDA KHUSUS PESAWAT SENDIRI (Halo Neon Cyan Berdenyut)
+      // A. PENANDA KHUSUS PESAWAT SENDIRI (Halo Neon Berdenyut Sesuai Karakter)
       let beaconRing: Phaser.GameObjects.Graphics | undefined;
       let markerTag: Phaser.GameObjects.Text | undefined;
 
+      const beaconColors = [0xef4444, 0x00f0ff, 0x22c55e, 0xfacc15, 0xd946ef];
+      const beaconColor = beaconColors[charId] || 0x00f0ff;
+
       if (isLocal) {
         beaconRing = this.add.graphics();
-        beaconRing.lineStyle(2.5, 0x00f0ff, 0.85);
+        beaconRing.lineStyle(2.5, beaconColor, 0.85);
         beaconRing.strokeCircle(0, 0, 36);
-        beaconRing.fillStyle(0x00f0ff, 0.15);
+        beaconRing.fillStyle(beaconColor, 0.15);
         beaconRing.fillCircle(0, 0, 36);
         container.add(beaconRing);
 
@@ -766,16 +819,17 @@ export class GameScene extends Phaser.Scene {
         container.add(markerTag);
       }
 
-      // Api knalpot mesin
-      const exhaust = this.add.sprite(0, 22, "exhaust_flame");
+      // Api knalpot mesin sesuai karakter
+      const exhaust = this.add.sprite(0, 22, exhaustKey);
       exhaust.setScale(1.35);
 
-      // Sprite Pesawat Pemain (Diperbesar agar gagah & jelas di smartphone)
+      // Sprite Pesawat Pemain Sesuai Karakter (Diperbesar agar gagah & jelas di smartphone)
       const sprite = this.add.sprite(0, 0, textureKey);
       sprite.setScale(1.4);
 
-      // Label Nama
-      const displayName = isLocal ? `★ ${player.name}` : player.name;
+      // Label Nama dengan Badge Karakter
+      const charTag = player.characterName ? `[${player.characterName}] ` : "";
+      const displayName = isLocal ? `★ ${charTag}${player.name}` : `${charTag}${player.name}`;
       const nameText = this.add.text(0, -36, displayName, {
         fontFamily: "'Outfit', sans-serif",
         fontSize: "11px",
@@ -831,6 +885,15 @@ export class GameScene extends Phaser.Scene {
         playerData.targetX = player.x;
         playerData.targetY = player.y;
         playerData.scoreText.setText(`⭐ ${player.score}`);
+
+        // Update tekstur pesawat dan exhaust sesuai karakter pilihan
+        const cId = (player.characterId >= 0 && player.characterId <= 4) ? player.characterId : (player.colorIndex % 5);
+        playerData.sprite.setTexture(`character_ship_${cId}`);
+        playerData.exhaust.setTexture(`exhaust_flame_${cId}`);
+
+        const cTag = player.characterName ? `[${player.characterName}] ` : "";
+        const updatedName = isLocal ? `★ ${cTag}${player.name}` : `${cTag}${player.name}`;
+        playerData.nameText.setText(updatedName);
 
         if (playerData.hpBarGfx) {
           this.renderShipHpBar(playerData.hpBarGfx, player.hp, player.maxHp || 5);
@@ -1394,7 +1457,7 @@ export class GameScene extends Phaser.Scene {
   private updateLeaderboard() {
     if (!this.room || !this.room.state) return;
 
-    const playerList: { name: string; score: number; isMe: boolean; hp: number; lives: number }[] = [];
+    const playerList: { name: string; score: number; isMe: boolean; hp: number; lives: number; characterName: string }[] = [];
     this.room.state.players.forEach((p: any, id: string) => {
       playerList.push({
         name: p.name,
@@ -1402,6 +1465,7 @@ export class GameScene extends Phaser.Scene {
         hp: p.hp,
         lives: p.lives !== undefined ? p.lives : 3,
         isMe: id === this.room.sessionId,
+        characterName: p.characterName || "",
       });
     });
 
@@ -1413,8 +1477,9 @@ export class GameScene extends Phaser.Scene {
         const item = playerList[i];
         const medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : `${i + 1}.`));
         const meTag = item.isMe ? " [YOU]" : "";
+        const charTag = item.characterName ? `[${item.characterName}] ` : "";
         const heart = "❤️".repeat(Math.max(0, item.lives));
-        entry.setText(`${medal} ${item.name.substring(0, 6)}${meTag} ${heart}: ${item.score}`);
+        entry.setText(`${medal} ${charTag}${item.name.substring(0, 6)}${meTag} ${heart}: ${item.score}`);
         entry.setColor(item.isMe ? "#00f0ff" : (i === 0 ? "#ffd700" : "#cbd5e1"));
       } else {
         entry.setText(`${i + 1}. -`);
