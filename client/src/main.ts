@@ -356,47 +356,182 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // 📱 BIND VIRTUAL TOUCH CONTROLS (SMARTPHONE)
+  // 📱 BIND VIRTUAL JOYSTICK & FIRE GLASS (SMARTPHONE)
   // ==========================================
   const getScene = (): GameScene | undefined => {
     return game.scene.getScene("GameScene") as GameScene;
   };
-
-  const bindButtonTouch = (elementId: string, actionKey: "left" | "right" | "up" | "down" | "shoot") => {
-    const btn = document.getElementById(elementId);
-    if (!btn) return;
 
   // Pastikan AudioContext smartphone aktif sejak sentuhan / interaksi pertama
   window.addEventListener("touchstart", () => sounds.unlockAudio(), { passive: true });
   window.addEventListener("touchend", () => sounds.unlockAudio(), { passive: true });
   window.addEventListener("click", () => sounds.unlockAudio(), { passive: true });
 
-  const startAction = (e: Event) => {
-    e.preventDefault();
-    sounds.unlockAudio();
+  const joystickZone = document.getElementById("virtual-joystick-zone");
+  const joystickBase = document.getElementById("joystick-base");
+  const joystickKnob = document.getElementById("joystick-knob");
+  const btnFire = document.getElementById("touch-fire");
+
+  let joystickTouchId: number | null = null;
+  let isMouseDraggingJoystick = false;
+  let stepUpTriggered = false;
+  let stepDownTriggered = false;
+
+  const updateJoystick = (clientX: number, clientY: number) => {
+    if (!joystickBase || !joystickKnob) return;
+    const rect = joystickBase.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    let dx = clientX - centerX;
+    let dy = clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+    const maxRadius = rect.width * 0.35; // Batas radius gerak knob
+
+    if (dist > maxRadius && dist > 0) {
+      dx = (dx / dist) * maxRadius;
+      dy = (dy / dist) * maxRadius;
+    }
+
+    joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+
     const scene = getScene();
-    if (scene) scene.touchInput[actionKey] = true;
+    if (!scene) return;
+
+    // 1. Kemudi Horizontal (Kiri / Kanan) dengan deadzone halus
+    const deadzoneX = 10;
+    if (dx < -deadzoneX) {
+      scene.touchInput.left = true;
+      scene.touchInput.right = false;
+    } else if (dx > deadzoneX) {
+      scene.touchInput.right = true;
+      scene.touchInput.left = false;
+    } else {
+      scene.touchInput.left = false;
+      scene.touchInput.right = false;
+    }
+
+    // 2. Kemudi Vertikal (Maju / Mundur 2 langkah) dengan step lock
+    const stepThreshold = 18;
+    if (dy < -stepThreshold) {
+      if (!stepUpTriggered) {
+        scene.touchInput.up = true;
+        stepUpTriggered = true;
+      } else {
+        scene.touchInput.up = false;
+      }
+      scene.touchInput.down = false;
+      stepDownTriggered = false;
+    } else if (dy > stepThreshold) {
+      if (!stepDownTriggered) {
+        scene.touchInput.down = true;
+        stepDownTriggered = true;
+      } else {
+        scene.touchInput.down = false;
+      }
+      scene.touchInput.up = false;
+      stepUpTriggered = false;
+    } else {
+      // Kembali ke zona tengah -> reset step lock agar bisa melangkah lagi
+      scene.touchInput.up = false;
+      scene.touchInput.down = false;
+      stepUpTriggered = false;
+      stepDownTriggered = false;
+    }
   };
 
-  const stopAction = (e: Event) => {
-    e.preventDefault();
+  const resetJoystick = () => {
+    if (joystickKnob) {
+      joystickKnob.style.transform = "translate(0px, 0px)";
+    }
+    joystickTouchId = null;
+    isMouseDraggingJoystick = false;
+    stepUpTriggered = false;
+    stepDownTriggered = false;
+
     const scene = getScene();
-    if (scene) scene.touchInput[actionKey] = false;
+    if (scene) {
+      scene.touchInput.left = false;
+      scene.touchInput.right = false;
+      scene.touchInput.up = false;
+      scene.touchInput.down = false;
+    }
   };
 
-  btn.addEventListener("touchstart", startAction, { passive: false });
-  btn.addEventListener("touchend", stopAction, { passive: false });
-  btn.addEventListener("touchcancel", stopAction, { passive: false });
-  btn.addEventListener("mousedown", startAction);
-  btn.addEventListener("mouseup", stopAction);
-  btn.addEventListener("mouseleave", stopAction);
-};
+  if (joystickZone) {
+    joystickZone.addEventListener("touchstart", (e: TouchEvent) => {
+      e.preventDefault();
+      sounds.unlockAudio();
+      if (e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        joystickTouchId = touch.identifier;
+        updateJoystick(touch.clientX, touch.clientY);
+      }
+    }, { passive: false });
 
-bindButtonTouch("touch-left", "left");
-bindButtonTouch("touch-right", "right");
-bindButtonTouch("touch-up", "up");
-bindButtonTouch("touch-down", "down");
-bindButtonTouch("touch-fire", "shoot");
+    joystickZone.addEventListener("touchmove", (e: TouchEvent) => {
+      e.preventDefault();
+      if (joystickTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joystickTouchId) {
+          updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+
+    joystickZone.addEventListener("touchend", (e: TouchEvent) => {
+      e.preventDefault();
+      resetJoystick();
+    }, { passive: false });
+
+    joystickZone.addEventListener("touchcancel", (e: TouchEvent) => {
+      e.preventDefault();
+      resetJoystick();
+    }, { passive: false });
+
+    // Fallback mouse untuk pengujian di browser desktop
+    joystickZone.addEventListener("mousedown", (e: MouseEvent) => {
+      isMouseDraggingJoystick = true;
+      sounds.unlockAudio();
+      updateJoystick(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("mousemove", (e: MouseEvent) => {
+      if (isMouseDraggingJoystick) {
+        updateJoystick(e.clientX, e.clientY);
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (isMouseDraggingJoystick) {
+        resetJoystick();
+      }
+    });
+  }
+
+  // Tombol Tembak Kaca Transparan (Fire Glass)
+  if (btnFire) {
+    const startShoot = (e: Event) => {
+      e.preventDefault();
+      sounds.unlockAudio();
+      const scene = getScene();
+      if (scene) scene.touchInput.shoot = true;
+    };
+
+    const stopShoot = (e: Event) => {
+      e.preventDefault();
+      const scene = getScene();
+      if (scene) scene.touchInput.shoot = false;
+    };
+
+    btnFire.addEventListener("touchstart", startShoot, { passive: false });
+    btnFire.addEventListener("touchend", stopShoot, { passive: false });
+    btnFire.addEventListener("touchcancel", stopShoot, { passive: false });
+    btnFire.addEventListener("mousedown", startShoot);
+    btnFire.addEventListener("mouseup", stopShoot);
+    btnFire.addEventListener("mouseleave", stopShoot);
+  }
 
   // ==========================================
   // 🎵 AUDIO CONTROLS (BGM & SFX TOGGLE)

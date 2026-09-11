@@ -33,28 +33,27 @@
 
     <!-- Main Game Canvas Container -->
     <main class="canvas-wrapper">
-      <div id="game-container"></div>
+      <div id="game-container">
+        <!-- Virtual Touch Controls (Overlay transparan langsung di atas arena canvas) -->
+        <div id="touch-controls" class="touch-overlay">
+          <!-- Joystick Virtual Transparan di Kiri Bawah -->
+          <div id="virtual-joystick-zone" class="joystick-zone">
+            <div id="joystick-base" class="joystick-base">
+              <span class="j-arrow j-arrow-up">▲</span>
+              <span class="j-arrow j-arrow-down">▼</span>
+              <span class="j-arrow j-arrow-left">◄</span>
+              <span class="j-arrow j-arrow-right">►</span>
+              <div id="joystick-knob" class="joystick-knob"></div>
+            </div>
+          </div>
 
-      <!-- Virtual Touch Controls untuk Smartphone / Layar Sentuh -->
-      <div id="touch-controls" class="touch-overlay" style="display: none;">
-        <div class="touch-dpad">
-          <div class="touch-row-vert">
-            <button id="touch-up" class="touch-btn touch-btn-vert" aria-label="Maju">▲ MAJU</button>
+          <!-- Tombol Tembak Kaca Transparan di Kanan Bawah -->
+          <div class="fire-button-zone">
+            <button id="touch-fire" class="touch-btn-fire-glass" aria-label="Tembak Laser">
+              <span class="fire-glass-icon">🔥</span>
+              <span class="fire-glass-label">FIRE</span>
+            </button>
           </div>
-          <div class="touch-row-horiz">
-            <button id="touch-left" class="touch-btn touch-btn-horiz" aria-label="Kiri">◄</button>
-            <button id="touch-right" class="touch-btn touch-btn-horiz" aria-label="Kanan">►</button>
-          </div>
-          <div class="touch-row-vert">
-            <button id="touch-down" class="touch-btn touch-btn-vert" aria-label="Mundur">▼ MUNDUR</button>
-          </div>
-        </div>
-
-        <div class="touch-action">
-          <button id="touch-fire" class="touch-btn touch-btn-fire" aria-label="Tembak">
-            <span class="fire-icon">🔥</span>
-            <span class="fire-label">TEMBAK</span>
-          </button>
         </div>
       </div>
 
@@ -176,7 +175,7 @@
           Perusahaan sedang menghadapi krisis KPI darurat! <strong>Anda dan rekan-rekan kerja Anda</strong> diminta untuk mengumpulkan poin sebanyak-banyaknya di orbit antariksa (<strong>Uang Lembur +25</strong>, <strong>Tunjangan +50</strong>, & <strong>Bonus KPI +100</strong>) sambil menghancurkan armada kapal musuh korporat (Deadline Dadakan, Revisi Tengah Malam, Audit Pajak, dll) yang meluncurkan serangan peluru plasma!
         </p>
         <div class="storyboard-alert">
-          ⚠️ <strong>ATURAN PROTOKOL:</strong> Anda dibekali <strong>3 Nyawa (❤️❤️❤️)</strong>. Jika terkena tembakan 3 kali, pesawat Anda langsung hancur dan tereliminasi! Seluruh skor match akan langsung terakumulasi ke profil kantor Anda.
+          ⚠️ <strong>ATURAN PROTOKOL:</strong> Anda dibekali <strong>5 Bar Darah (Nyawa)</strong>. Jika terkena tembakan 5 kali, pesawat Anda langsung hancur dan tereliminasi! Seluruh skor match akan langsung terakumulasi ke profil kantor Anda.
         </div>
       </div>
 

@@ -9,6 +9,7 @@ interface PlayerData {
   nameText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
   hpText: Phaser.GameObjects.Text;
+  hpBarGfx?: Phaser.GameObjects.Graphics;
   beaconRing?: Phaser.GameObjects.Graphics;
   markerTag?: Phaser.GameObjects.Text;
   targetX: number;
@@ -77,6 +78,8 @@ export class GameScene extends Phaser.Scene {
   private statusBadge!: Phaser.GameObjects.Text;
   private myScoreText!: Phaser.GameObjects.Text;
   private myHpText!: Phaser.GameObjects.Text;
+  private myHpBarFill!: Phaser.GameObjects.Graphics;
+  private myHpValText!: Phaser.GameObjects.Text;
   private myCumulativeText!: Phaser.GameObjects.Text;
   private leaderboardContainer!: Phaser.GameObjects.Container;
   private leaderboardEntries: Phaser.GameObjects.Text[] = [];
@@ -316,50 +319,65 @@ export class GameScene extends Phaser.Scene {
 
     // Header Background Bar
     const hudBar = this.add.graphics().setDepth(100);
-    hudBar.fillStyle(0x0f172a, 0.88);
-    hudBar.fillRoundedRect(16, 12, 768, 48, 8);
-    hudBar.lineStyle(1, 0x00f0ff, 0.3);
-    hudBar.strokeRoundedRect(16, 12, 768, 48, 8);
+    hudBar.fillStyle(0x0f172a, 0.9);
+    hudBar.fillRoundedRect(12, 12, 776, 48, 8);
+    hudBar.lineStyle(1, 0x00f0ff, 0.35);
+    hudBar.strokeRoundedRect(12, 12, 776, 48, 8);
 
-    // Status Room
-    this.statusBadge = this.add.text(28, hudY + 12, "MENUNGGU REKAN KERJA...", {
+    // 1. Status Room (Kiri)
+    this.statusBadge = this.add.text(24, hudY + 12, "STANDBY", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "13px",
+      fontSize: "12px",
       fontStyle: "bold",
       color: "#38bdf8",
     }).setOrigin(0, 0.5).setDepth(101);
 
-    // Nyawa Pemain Lokal (❤️❤️❤️)
-    this.myHpText = this.add.text(285, hudY + 12, "NYAWA: ❤️❤️❤️", {
-      fontFamily: "'Outfit', sans-serif",
-      fontSize: "13px",
-      fontStyle: "bold",
-      color: "#f43f5e",
-    }).setOrigin(0.5, 0.5).setDepth(101);
+    // 2. Health / Darah Progress Bar (Pemain Lokal)
+    const hpBox = this.add.graphics().setDepth(101);
+    hpBox.fillStyle(0x050b14, 0.95);
+    hpBox.fillRoundedRect(190, hudY + 4, 116, 16, 4);
+    hpBox.lineStyle(1, 0x334155, 0.8);
+    hpBox.strokeRoundedRect(190, hudY + 4, 116, 16, 4);
 
-    // Countdown Timer
-    this.timerText = this.add.text(435, hudY + 12, "WAKTU: 120s", {
+    this.myHpBarFill = this.add.graphics().setDepth(102);
+
+    this.myHpText = this.add.text(182, hudY + 12, "🛡️", {
+      fontSize: "13px"
+    }).setOrigin(1, 0.5).setDepth(103);
+
+    this.myHpValText = this.add.text(248, hudY + 12, "5/5 (100%)", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "17px",
+      fontSize: "10px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    }).setOrigin(0.5, 0.5).setDepth(103);
+
+    // 3. Countdown Timer (Tengah)
+    this.timerText = this.add.text(395, hudY + 12, "WAKTU: 120s", {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "15px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5, 0.5).setDepth(101);
 
-    // Skor Match Ini
-    this.myScoreText = this.add.text(595, hudY + 12, "MATCH: 0", {
+    // 4. Skor Match Ini
+    this.myScoreText = this.add.text(550, hudY + 12, "MATCH: 0", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "14px",
+      fontSize: "13px",
       fontStyle: "bold",
       color: "#00f0ff",
     }).setOrigin(0.5, 0.5).setDepth(101);
 
-    // Total Akumulasi Skor Kantor
-    this.myCumulativeText = this.add.text(765, hudY + 12, "TOTAL: 0", {
+    // 5. Total Akumulasi Skor Kantor (Kanan)
+    this.myCumulativeText = this.add.text(772, hudY + 12, "TOTAL: 0", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "13px",
+      fontSize: "12px",
       fontStyle: "bold",
       color: "#a855f7",
     }).setOrigin(1, 0.5).setDepth(101);
+
+    // Inisialisasi awal render HUD health bar
+    this.updateHUDHealthBar(5, 5);
 
     // Leaderboard Match Box (Top 5) di kanan atas
     this.leaderboardContainer = this.add.container(620, 70).setDepth(100);
@@ -444,7 +462,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.eliminatedModal.add(title);
 
-    this.elimReasonText = this.add.text(0, -55, "Pesawat Anda terkena tembakan musuh 3x!", {
+    this.elimReasonText = this.add.text(0, -55, "Pesawat Anda terkena tembakan musuh 5x!", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "14px",
       color: "#fca5a5",
@@ -577,13 +595,13 @@ export class GameScene extends Phaser.Scene {
       if (isLocal) {
         beaconRing = this.add.graphics();
         beaconRing.lineStyle(2.5, 0x00f0ff, 0.85);
-        beaconRing.strokeCircle(0, 0, 26);
+        beaconRing.strokeCircle(0, 0, 32);
         beaconRing.fillStyle(0x00f0ff, 0.15);
-        beaconRing.fillCircle(0, 0, 26);
+        beaconRing.fillCircle(0, 0, 32);
         container.add(beaconRing);
 
         // Label Tag Panah "▼ ANDA" di atas kepala pesawat
-        markerTag = this.add.text(0, -38, "▼ ANDA", {
+        markerTag = this.add.text(0, -44, "▼ ANDA", {
           fontFamily: "'Outfit', sans-serif",
           fontSize: "11px",
           fontStyle: "bold",
@@ -593,32 +611,40 @@ export class GameScene extends Phaser.Scene {
       }
 
       // Api knalpot mesin
-      const exhaust = this.add.sprite(0, 16, "exhaust_flame");
+      const exhaust = this.add.sprite(0, 20, "exhaust_flame");
+      exhaust.setScale(1.3);
+
+      // Sprite Pesawat Pemain (Diperbesar 35% agar gagah & jelas di smartphone)
       const sprite = this.add.sprite(0, 0, textureKey);
+      sprite.setScale(1.35);
 
       // Label Nama
       const displayName = isLocal ? `★ ${player.name}` : player.name;
-      const nameText = this.add.text(0, -22, displayName, {
+      const nameText = this.add.text(0, -28, displayName, {
         fontFamily: "'Outfit', sans-serif",
         fontSize: "11px",
         fontStyle: "bold",
         color: isLocal ? "#00f0ff" : "#f1f5f9",
       }).setOrigin(0.5);
 
-      // Ikon Nyawa (❤️❤️❤️) di atas pesawat
-      const hpHearts = "❤️".repeat(Math.max(0, player.hp || 3)) + "🖤".repeat(Math.max(0, 3 - (player.hp || 3)));
-      const hpText = this.add.text(0, -11, hpHearts, {
-        fontSize: "9px"
+      // Mini Health Bar mengambang di atas badan pesawat
+      const hpBarGfx = this.add.graphics();
+      this.renderShipHpBar(hpBarGfx, player.hp || 5, 5);
+
+      // Ikon Nyawa Hati
+      const hpHearts = "❤️".repeat(Math.max(0, player.hp || 5)) + "🖤".repeat(Math.max(0, 5 - (player.hp || 5)));
+      const hpText = this.add.text(0, -6, hpHearts, {
+        fontSize: "8px"
       }).setOrigin(0.5);
 
       // Skor kecil
-      const scoreText = this.add.text(0, 24, "0", {
+      const scoreText = this.add.text(0, 28, "0", {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "10px",
         color: "#ffd700",
       }).setOrigin(0.5);
 
-      container.add([exhaust, sprite, nameText, hpText, scoreText]);
+      container.add([exhaust, sprite, hpBarGfx, nameText, hpText, scoreText]);
 
       const playerData: PlayerData = {
         container,
@@ -627,6 +653,7 @@ export class GameScene extends Phaser.Scene {
         nameText,
         scoreText,
         hpText,
+        hpBarGfx,
         beaconRing,
         markerTag,
         targetX: player.x,
@@ -640,7 +667,7 @@ export class GameScene extends Phaser.Scene {
       if (isLocal) {
         this.myScoreText.setText(`MATCH: ${player.score}`);
         this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
-        this.myHpText.setText(`NYAWA: ${hpHearts}`);
+        this.updateHUDHealthBar(player.hp || 5, 5);
       }
 
       player.onChange(() => {
@@ -648,13 +675,17 @@ export class GameScene extends Phaser.Scene {
         playerData.targetY = player.y;
         playerData.scoreText.setText(`⭐ ${player.score}`);
 
-        const currentHearts = "❤️".repeat(Math.max(0, player.hp)) + "🖤".repeat(Math.max(0, 3 - player.hp));
+        if (playerData.hpBarGfx) {
+          this.renderShipHpBar(playerData.hpBarGfx, player.hp, 5);
+        }
+
+        const currentHearts = "❤️".repeat(Math.max(0, player.hp)) + "🖤".repeat(Math.max(0, 5 - player.hp));
         playerData.hpText.setText(currentHearts);
 
         if (isLocal) {
           this.myScoreText.setText(`MATCH: ${player.score}`);
           this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
-          this.myHpText.setText(`NYAWA: ${currentHearts}`);
+          this.updateHUDHealthBar(player.hp, 5);
 
           const badgeTotal = document.getElementById("badge-total-score");
           if (badgeTotal) {
@@ -873,11 +904,12 @@ export class GameScene extends Phaser.Scene {
     this.room.onMessage("player_damaged", (data: any) => {
       this.createExplosionEffect(data.x, data.y, true);
       sounds.playExplosion(true);
-      this.spawnFloatingText(data.x, data.y, `💥 KENA SERANGAN! (-1 NYAWA, SISA: ${data.hpRemaining})`, "#ef4444");
+      this.spawnFloatingText(data.x, data.y, `💥 KENA SERANGAN! (-1 DARAH, SISA: ${data.hpRemaining}/5)`, "#ef4444");
 
       if (data.playerId === this.room.sessionId) {
         this.cameras.main.shake(320, 0.035);
         this.cameras.main.flash(250, 255, 0, 0);
+        this.updateHUDHealthBar(data.hpRemaining, 5);
       }
     });
 
@@ -909,7 +941,7 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 3x!");
+      this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 5x!");
       this.elimScoreText.setText(
         `Skor Pertandingan Ini: ${data.matchScore} Poin\n` +
         `Total Akumulasi Kantor: ${data.totalScore} Poin\n` +
@@ -1221,5 +1253,65 @@ export class GameScene extends Phaser.Scene {
         shockwave.destroy();
       }
     });
+  }
+
+  /**
+   * Render Health Progress Bar di HUD utama
+   */
+  private updateHUDHealthBar(hp: number, maxHp: number = 5) {
+    if (!this.myHpBarFill) return;
+    this.myHpBarFill.clear();
+
+    const clampedHp = Math.max(0, Math.min(maxHp, hp));
+    const ratio = clampedHp / maxHp;
+    const barWidth = Math.round(112 * ratio);
+
+    let fillColor = 0x10b981; // Hijau (5/5)
+    if (clampedHp === 4) fillColor = 0x34d399; // Emerald (4/5)
+    else if (clampedHp === 3) fillColor = 0xfacc15; // Kuning (3/5)
+    else if (clampedHp === 2) fillColor = 0xf97316; // Oranye (2/5)
+    else if (clampedHp <= 1) fillColor = 0xef4444; // Merah Kritis (1/5)
+
+    if (barWidth > 0) {
+      this.myHpBarFill.fillStyle(fillColor, 0.92);
+      this.myHpBarFill.fillRoundedRect(192, 28 + 2, barWidth, 12, 3);
+    }
+
+    if (this.myHpText) {
+      this.myHpText.setText(clampedHp <= 1 ? "⚠️" : "🛡️");
+    }
+
+    if (this.myHpValText) {
+      this.myHpValText.setText(`${clampedHp}/${maxHp} (${Math.round(ratio * 100)}%)`);
+      this.myHpValText.setColor(clampedHp <= 1 ? "#fca5a5" : "#ffffff");
+    }
+  }
+
+  /**
+   * Render Mini Health Bar mengambang di atas masing-masing pesawat
+   */
+  private renderShipHpBar(gfx: Phaser.GameObjects.Graphics, hp: number, maxHp: number = 5) {
+    gfx.clear();
+    const clampedHp = Math.max(0, Math.min(maxHp, hp));
+    const ratio = clampedHp / maxHp;
+
+    // Slot gelap
+    gfx.fillStyle(0x0f172a, 0.9);
+    gfx.fillRoundedRect(-18, -14, 36, 4, 1.5);
+    gfx.lineStyle(0.8, 0x334155, 0.8);
+    gfx.strokeRoundedRect(-18, -14, 36, 4, 1.5);
+
+    // Isi bar
+    let fillColor = 0x10b981;
+    if (clampedHp === 4) fillColor = 0x34d399;
+    else if (clampedHp === 3) fillColor = 0xfacc15;
+    else if (clampedHp === 2) fillColor = 0xf97316;
+    else if (clampedHp <= 1) fillColor = 0xef4444;
+
+    const fillWidth = Math.max(0, Math.round(34 * ratio));
+    if (fillWidth > 0) {
+      gfx.fillStyle(fillColor, 1);
+      gfx.fillRoundedRect(-17, -13, fillWidth, 2, 1);
+    }
   }
 }

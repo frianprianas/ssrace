@@ -18,8 +18,8 @@ export class Player extends Schema {
   @type("number") stepY: number = 2; // Posisi Netral: 2. Range 0 (Mundur 2 langkah: 580) s/d 4 (Maju 2 langkah: 440)
   @type("number") score: number = 0;
   @type("number") cumulativeScore: number = 0; // Akumulasi total skor dari database
-  @type("number") hp: number = 3; // Nyawa pemain (Maks 3x tembakan)
-  @type("number") maxHp: number = 3;
+  @type("number") hp: number = 5; // Nyawa pemain (Maks 5x tembakan)
+  @type("number") maxHp: number = 5;
   @type("boolean") isEliminated: boolean = false;
   @type("number") invulnerableTimer: number = 0; // Kebal saat baru tertabrak/tertembak
   @type("number") colorIndex: number = 0;

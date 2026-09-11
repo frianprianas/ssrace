@@ -265,102 +265,138 @@ body {
 }
 
 /* ==========================================
-   📱 VIRTUAL TOUCH CONTROLS (SMARTPHONE)
+   📱 VIRTUAL TOUCH CONTROLS (TRANSPARENT JOYSTICK & FIRE GLASS)
    ========================================== */
 .touch-overlay {
   position: absolute;
-  bottom: 50px;
-  left: 0;
+  inset: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 16px;
+  padding: 14px 18px;
   box-sizing: border-box;
   pointer-events: none;
-  z-index: 50;
+  z-index: 80;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
 }
 
-.touch-dpad, .touch-action {
+/* Virtual Joystick Zone (Kiri Bawah) */
+.joystick-zone {
   pointer-events: auto;
+  width: 130px;
+  height: 130px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-}
-
-.touch-row-vert {
-  display: flex;
   justify-content: center;
+  position: relative;
+  touch-action: none;
 }
 
-.touch-row-horiz {
+.joystick-base {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.28);
+  border: 1.8px solid rgba(0, 240, 255, 0.4);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15), inset 0 0 12px rgba(0, 240, 255, 0.08);
+  position: relative;
   display: flex;
-  gap: 8px;
-  margin: 3px 0;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  cursor: grab;
 }
 
-.touch-btn {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1.5px solid rgba(0, 240, 255, 0.45);
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 800;
-  border-radius: 12px;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  touch-action: manipulation;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  transition: transform 0.06s ease, background 0.06s ease;
+.joystick-base:active {
+  cursor: grabbing;
+  border-color: rgba(0, 240, 255, 0.7);
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.35);
+}
+
+.j-arrow {
+  position: absolute;
+  font-size: 10px;
+  color: rgba(0, 240, 255, 0.45);
+  font-weight: 900;
+  pointer-events: none;
   user-select: none;
 }
 
-.touch-btn:active {
-  transform: scale(0.92);
-  background: rgba(0, 240, 255, 0.35);
-  border-color: #00f0ff;
+.j-arrow-up { top: 6px; }
+.j-arrow-down { bottom: 6px; }
+.j-arrow-left { left: 8px; }
+.j-arrow-right { right: 8px; }
+
+.joystick-knob {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(0, 240, 255, 0.75), rgba(0, 119, 255, 0.35));
+  border: 1.8px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.4);
+  position: absolute;
+  pointer-events: none;
+  transform: translate(0px, 0px);
+  will-change: transform;
 }
 
-.touch-btn-horiz {
-  width: 58px;
-  height: 50px;
-  font-size: 1.3rem;
+/* Fire Button Zone (Kanan Bawah) */
+.fire-button-zone {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-bottom: 6px;
+  padding-right: 4px;
 }
 
-.touch-btn-vert {
-  padding: 4px 12px;
-  font-size: 0.68rem;
-  letter-spacing: 0.5px;
-  border-radius: 6px;
-  background: rgba(15, 23, 42, 0.7);
-}
-
-.touch-btn-fire {
-  width: 78px;
-  height: 78px;
+.touch-btn-fire-glass {
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.85), rgba(185, 28, 28, 0.95));
-  border: 2px solid #f87171;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  background: radial-gradient(circle at 35% 35%, rgba(239, 68, 68, 0.32), rgba(185, 28, 28, 0.18));
+  border: 2px solid rgba(248, 113, 113, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.28), inset 0 0 10px rgba(239, 68, 68, 0.15);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  color: #fff;
 }
 
-.touch-btn-fire:active {
-  transform: scale(0.9);
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  box-shadow: 0 0 30px rgba(239, 68, 68, 0.85);
+.touch-btn-fire-glass:active {
+  transform: scale(0.91);
+  background: radial-gradient(circle at 35% 35%, rgba(239, 68, 68, 0.75), rgba(220, 38, 38, 0.5));
+  border-color: #ff4444;
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.85), inset 0 0 14px rgba(255, 255, 255, 0.4);
 }
 
-.fire-icon {
+.fire-glass-icon {
   font-size: 1.4rem;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+}
+
+.fire-glass-label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
 }
 
 .fire-label {
@@ -512,34 +548,87 @@ body {
 
 /* Mobile Layout Tweaks */
 @media (max-width: 860px) {
+  html, body {
+    overflow-x: hidden;
+  }
+
   #app {
-    padding: 6px;
-  }
-  .game-header {
+    padding: 4px;
+    gap: 4px;
+    min-height: 100dvh;
+    height: 100dvh;
+    box-sizing: border-box;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
   }
-  .connection-bar {
-    width: 100%;
+
+  .game-header {
+    flex-direction: row;
+    align-items: center;
     justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 8px;
+    gap: 6px;
+  }
+
+  .logo-title {
+    font-size: 1.15rem;
+  }
+
+  .logo-title .sub {
+    display: none;
+  }
+
+  .badge-satire {
+    font-size: 0.55rem;
+  }
+
+  .canvas-wrapper {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+    justify-content: center;
+  }
+
+  #game-container {
+    width: 100%;
+    height: 100%;
+    max-height: calc(100dvh - 58px);
+    border-radius: 8px;
+  }
+
+  /* Sembunyikan panel footer instruksi keyboard desktop pada HP untuk space luas */
+  .legend-panel {
+    display: none !important;
   }
 }
 
 @media (max-width: 500px) {
+  .joystick-zone {
+    width: 115px;
+    height: 115px;
+  }
+
+  .joystick-base {
+    width: 96px;
+    height: 96px;
+  }
+
+  .joystick-knob {
+    width: 40px;
+    height: 40px;
+  }
+
+  .touch-btn-fire-glass {
+    width: 72px;
+    height: 72px;
+  }
+
   .touch-overlay {
-    bottom: 55px;
-    padding: 0 8px;
+    padding: 8px 10px;
   }
-  .touch-btn-horiz {
-    width: 50px;
-    height: 46px;
-    font-size: 1.2rem;
-  }
-  .touch-btn-fire {
-    width: 70px;
-    height: 70px;
-  }
+
   .input-addon {
     font-size: 0.62rem;
     padding: 6px 8px;

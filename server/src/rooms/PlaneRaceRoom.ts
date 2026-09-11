@@ -105,8 +105,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.y = this.getStepYCoordinate(player.stepY);
     player.colorIndex = totalCurrent % 5;
     player.score = 0;
-    player.hp = 3; // 3 Nyawa penuh
-    player.maxHp = 3;
+    player.hp = 5; // 5 Nyawa / Bar Darah penuh
+    player.maxHp = 5;
     player.isEliminated = false;
     player.invulnerableTimer = 2.0; // Kebal 2 detik saat baru join
 
@@ -252,7 +252,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
     // 2. Update Pergerakan & Tembakan Pemain (Kecepatan geser 260 agar stabil di smartphone)
     const moveSpeedX = 260;
-    const playerRadius = 18;
+    const playerRadius = 22; // Ukuran pesawat diperbesar (sebelumnya 18)
 
     this.state.players.forEach((player, sessionId) => {
       if (player.isEliminated) return;
@@ -299,7 +299,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         const p1 = playerArray[i];
         const p2 = playerArray[j];
         const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        const minDist = 38; // Jarak benturan fisik antar sayap/badan pesawat
+        const minDist = 44; // Jarak benturan fisik antar sayap/badan pesawat yang diperbesar
 
         if (dist < minDist && dist > 0.001) {
           const overlap = (minDist - dist);
@@ -528,7 +528,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.stepY = Math.max(0, player.stepY - 1); // Terpental mundur 1 langkah
     player.y = this.getStepYCoordinate(player.stepY);
 
-    console.log(`[Room] Player ${player.name} terkena ${sourceName}. Sisa HP: ${player.hp}/3`);
+    console.log(`[Room] Player ${player.name} terkena ${sourceName}. Sisa HP: ${player.hp}/5`);
 
     this.broadcast("player_damaged", {
       playerId: sessionId,
@@ -540,7 +540,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       y: player.y
     });
 
-    // Jika tertembak 3x (HP habis), Game Over dan Kick dari room!
+    // Jika tertembak 5x (HP habis), Game Over dan Kick dari room!
     if (player.hp <= 0) {
       this.eliminatePlayer(player, sessionId, sourceName);
     }
@@ -579,7 +579,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     if (client) {
       // Kirim pesan langsung ke klien yang bersangkutan
       client.send("you_are_eliminated", {
-        message: `Pesawat Anda hancur terkena serangan 3x oleh ${killerSource}!`,
+        message: `Pesawat Anda hancur terkena serangan 5x oleh ${killerSource}!`,
         matchScore: player.score,
         totalScore: record.totalScore,
         highestScore: record.highestScore,
@@ -637,7 +637,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     let idx = 0;
     this.state.players.forEach((player) => {
       player.score = 0;
-      player.hp = 3;
+      player.hp = 5;
+      player.maxHp = 5;
       player.isEliminated = false;
       player.stepY = 2; // Posisi netral seragam untuk semua pemain
       player.x = 160 + (idx * 120) % 500;
