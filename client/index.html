@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSRace - Slim Survival Race | Corporate Satire Multiplayer 2D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Corporate Header -->
+    <header class="game-header">
+      <div class="logo-group">
+        <span class="badge-satire">CORPORATE SURVIVAL SIMULATOR</span>
+        <h1 class="logo-title">SSRace <span class="sub">Slim Survival Race</span></h1>
+      </div>
+
+      <!-- Quick Connect Bar -->
+      <div class="connection-bar">
+        <div class="input-group">
+          <label for="server-url">Server WebSocket</label>
+          <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567">
+        </div>
+        <div class="input-group">
+          <label for="player-name">Nama Karyawan</label>
+          <input type="text" id="player-name" value="Karyawan Teladan" maxlength="15" placeholder="Nama Anda">
+        </div>
+        <button id="btn-connect" class="btn-primary">GABUNG RACE</button>
+      </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="canvas-wrapper">
+      <div id="game-container"></div>
+
+      <!-- Instruction / Legend Footer -->
+      <div class="legend-panel">
+        <div class="legend-item">
+          <span class="key-cap">W</span> / <span class="key-cap">▲</span> <strong>Thrust (Gas)</strong>
+        </div>
+        <div class="legend-item">
+          <span class="key-cap">A</span> <span class="key-cap">D</span> / <span class="key-cap">◄</span> <span class="key-cap">►</span> <strong>Kemudi Arah</strong>
+        </div>
+        <div class="legend-divider"></div>
+        <div class="legend-item">
+          <span class="dot coin-25"></span> <strong>25 Lembur</strong> (60%)
+        </div>
+        <div class="legend-item">
+          <span class="dot coin-50"></span> <strong>50 Tunjangan</strong> (30%)
+        </div>
+        <div class="legend-item">
+          <span class="dot coin-100"></span> <strong>100 Bonus KPI</strong> (10%)
+        </div>
+        <div class="legend-item">
+          <span class="dot enemy-hazard"></span> <strong class="danger-text">Obstacle Korporat (-50 & Reset)</strong>
+        </div>
+        <div class="legend-divider"></div>
+        <button id="btn-sound" class="btn-sound" title="Toggle Suara">🔊 Sound: ON</button>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

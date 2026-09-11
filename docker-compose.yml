@@ -1,0 +1,18 @@
+services:
+  ssrace-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: ssrace_colyseus_server
+    restart: unless-stopped
+    ports:
+      - "2567:2567"
+    environment:
+      - PORT=2567
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2567/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
