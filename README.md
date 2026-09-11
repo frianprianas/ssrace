@@ -173,8 +173,9 @@ git push -u origin main
 
 ---
 
-## 🎮 7. Kontrol Game
-- **W / Panah Atas:** Dorongan Maju (Thrust / Gas Pesawat)
-- **A / Panah Kiri:** Belok Kiri
-- **D / Panah Kanan:** Belok Kanan
-- **Tombol Audio:** Toggle suara efek sintetis di bagian bawah canvas.
+## 🎮 7. Kontrol Game (Space Shooter Style)
+- **A / D atau Panah Kiri / Kanan:** Menggeser posisi pesawat ke kiri dan ke kanan secara lincah.
+- **W / S atau Panah Atas / Bawah:** Maju / Mundur (3 langkah vertikal: Depan, Tengah, Belakang) agar pemain tidak saling berebut garis dan tidak berdesak-desakan.
+- **SPASI atau KLIK MOUSE:** Menembakkan laser ke atas untuk menghancurkan musuh korporat yang meluncur turun (+40 Poin).
+- **Tabrakan Antar Pemain:** Pesawat bersifat padat (*solid*); jika saling bersenggolan dengan pemain lain, kedua pesawat akan terpental elastis menjauh sehingga tidak tumpang tindih.
+- **Tombol Audio:** Toggle suara efek laser, ledakan, koin, dan sirine di bagian bawah canvas.
