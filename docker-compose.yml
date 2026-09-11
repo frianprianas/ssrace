@@ -1,7 +1,7 @@
 services:
   ssrace-server:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
     container_name: ssrace_colyseus_server
     restart: unless-stopped
@@ -16,7 +16,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:2567/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2567/api/status || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

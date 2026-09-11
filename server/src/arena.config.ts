@@ -2,6 +2,8 @@ import config from "@colyseus/tools";
 import { monitor } from "@colyseus/monitor";
 import cors from "cors";
 import express from "express";
+import path from "path";
+import fs from "fs";
 import { PlaneRaceRoom } from "./rooms/PlaneRaceRoom";
 
 export default config({
@@ -16,8 +18,18 @@ export default config({
     app.use(cors());
     app.use(express.json());
 
-    // Health check endpoint
-    app.get("/", (req, res) => {
+    // Lokasi file statis frontend (public/ di production Docker, atau ../../client/dist di lokal)
+    const prodPublicDir = path.join(__dirname, "../public");
+    const devClientDistDir = path.join(__dirname, "../../client/dist");
+    const staticDir = fs.existsSync(prodPublicDir) ? prodPublicDir : devClientDistDir;
+
+    if (fs.existsSync(staticDir)) {
+      app.use(express.static(staticDir));
+      console.log(`[SSRace Server] Menyajikan frontend web client dari: ${staticDir}`);
+    }
+
+    // Health check API endpoint
+    app.get("/api/status", (req, res) => {
       res.json({
         name: "SSRace Server (Slim Survival Race)",
         status: "online",
@@ -33,6 +45,24 @@ export default config({
 
     // Colyseus Monitor Dashboard
     app.use("/colyseus", monitor());
+
+    // Fallback ke index.html untuk semua akses web browser
+    app.get("*", (req, res) => {
+      const indexPath = path.join(staticDir, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.json({
+          name: "SSRace Server",
+          status: "online",
+          endpoints: {
+            ws: "ws://localhost:2567",
+            monitor: "/colyseus",
+            api: "/api/status"
+          }
+        });
+      }
+    });
   },
 
   beforeListen: () => {

@@ -83,35 +83,36 @@ ssrace/
 
 ---
 
-## 🚀 4. Cara Menjalankan di Komputer Lokal
+## 🚀 4. Cara Memainkan Game
 
-### Prasyarat
-- Node.js versi 18+ (direkomendasikan Node.js 20 atau 24)
-- NPM versi 9+
+### Mode Produksi / Server Ubuntu (All-in-One Web Game):
+Setelah server berjalan via Docker di Ubuntu:
+1. Pemain (guru, siswa, atau staf) cukup membuka browser di PC, Laptop, atau HP mereka ke alamat:
+   ```text
+   http://<IP_SERVER_UBUNTU>:2567
+   ```
+2. Halaman web game SSRace akan langsung muncul di browser.
+3. Form login otomatis mengarahkan koneksi WebSocket ke server tersebut.
+4. Masukkan **Email Resmi Baknus Mail** (`@smk.baktinusantara666.sch.id` / `@baknus.sch.id`) dan Password.
+5. Klik **🚀 MASUK ARENA BALAP** untuk langsung balapan!
 
-### Langkah 1: Jalankan Server Colyseus
-Buka terminal baru di folder `server`:
-```bash
-cd server
-npm install
-npm run dev
-```
-Server akan aktif di:
-- **WebSocket URL:** `ws://localhost:2567`
-- **Health Check:** `http://localhost:2567/`
-- **Colyseus Monitor Dashboard:** `http://localhost:2567/colyseus`
+---
 
-### Langkah 2: Jalankan Client Phaser 3
-Buka terminal baru di folder `client`:
-```bash
-cd client
-npm install
-npm run dev
-```
-Buka browser di alamat yang tertera (biasanya `http://localhost:3000/`).
-- Masukkan Nama Karyawan.
-- Pastikan WebSocket URL tertulis `ws://localhost:2567`.
-- Klik **GABUNG RACE**. Buka 2 tab browser sekaligus untuk menguji multiplayer secara real-time!
+### Mode Pengembangan Lokal (PC Developer):
+Jika Anda ingin mengembangkan kode di PC lokal:
+1. **Jalankan Server:**
+   ```bash
+   cd server
+   npm install
+   npm run dev
+   ```
+2. **Jalankan Client Vite (Opsional jika ingin Hot Reload):**
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
+   Akses `http://localhost:3000` di browser. Buka 2 tab untuk menguji balapan multiplayer 2 pemain!
 
 ---
 

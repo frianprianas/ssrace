@@ -37,11 +37,17 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnOpenLogin = document.getElementById("btn-open-login") as HTMLButtonElement;
   const btnSound = document.getElementById("btn-sound") as HTMLButtonElement;
 
-  // Inisialisasi Server URL dari host browser jika dibuka di jaringan luar
+  // Inisialisasi Server URL dari host browser otomatis
   if (inputServer) {
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    if (!isLocalhost && window.location.hostname) {
-      inputServer.value = `ws://${window.location.hostname}:2567`;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    if (window.location.port === "3000") {
+      // Dibuka via Vite dev server lokal
+      inputServer.value = `${protocol}//${window.location.hostname}:2567`;
+    } else if (window.location.host) {
+      // Dibuka langsung via All-in-One server (port 2567 atau domain publik)
+      inputServer.value = `${protocol}//${window.location.host}`;
+    } else {
+      inputServer.value = "ws://localhost:2567";
     }
   }
 
