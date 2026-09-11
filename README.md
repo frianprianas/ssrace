@@ -31,6 +31,7 @@ Dalam **SSRace**, pemain berperan sebagai karyawan korporat yang mengendalikan p
 ### Backend (`/server`)
 - **Runtime & Bahasa:** Node.js, TypeScript
 - **Multiplayer Engine:** Colyseus Framework (`@colyseus/tools`, `colyseus`, `@colyseus/schema`)
+- **Autentikasi Eksklusif Baknus Mail:** Menggunakan `onAuth()` hook Colyseus untuk memvalidasi kredensial email/password langsung ke API Baknus Mail (port 5000) atau via JWT token SSO. Hanya email resmi domain (`smk.baktinusantara666.sch.id`, `baknus.sch.id`) yang dapat masuk ke room.
 - **Server-Authoritative:** Seluruh kalkulasi fisika pesawat (koordinat `x`, `y`, rotasi `angle`, dorongan `thrust`, inersia/drag), pantulan dinding arena, dan tabrakan (`Math.hypot`) dihitung 100% di server dengan tick rate 50 FPS.
 - **Kapasitas Room:** Maksimal 5 pemain per room (`maxClients = 5`). Jika ada pemain ke-6 yang masuk, Colyseus otomatis membuatkan room baru.
 - **Siklus Hidup Room:**

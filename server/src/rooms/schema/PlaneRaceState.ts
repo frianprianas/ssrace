@@ -3,6 +3,7 @@ import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 export class Player extends Schema {
   @type("string") id: string = "";
   @type("string") name: string = "";
+  @type("string") email: string = "";
   @type("number") x: number = 400;
   @type("number") y: number = 300;
   @type("number") vx: number = 0;

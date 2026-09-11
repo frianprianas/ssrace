@@ -10,6 +10,11 @@ services:
     environment:
       - PORT=2567
       - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_change_me}
+      - BAKNUS_MAIL_API_URL=${BAKNUS_MAIL_API_URL:-http://host.docker.internal:5000/api/auth/login}
+      - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-smk.baktinusantara666.sch.id,baktinusantara666.sch.id,baknus.sch.id}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:2567/ || exit 1"]
       interval: 30s

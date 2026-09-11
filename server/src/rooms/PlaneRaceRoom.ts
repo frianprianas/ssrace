@@ -1,5 +1,6 @@
-import { Room, Client } from "colyseus";
+import { Room, Client, ServerError } from "colyseus";
 import { PlaneRaceState, Player, Coin, Enemy } from "./schema/PlaneRaceState";
+import { authenticateBaknusUser, BaknusUser } from "../auth/baknusAuth";
 
 interface PlayerInput {
   left: boolean;
@@ -20,6 +21,17 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     { name: "Audit Pajak", speed: 120 },
     { name: "Micromanagement", speed: 155 }
   ];
+
+  async onAuth(client: Client, options: any): Promise<BaknusUser> {
+    try {
+      const user = await authenticateBaknusUser(options);
+      console.log(`[Room Auth] Autentikasi Berhasil: ${user.name} (${user.email})`);
+      return user;
+    } catch (err: any) {
+      console.warn(`[Room Auth] Akses Ditolak untuk ${client.sessionId}:`, err.message);
+      throw new ServerError(401, err.message || "Kredensial Baknus Mail tidak valid!");
+    }
+  }
 
   onCreate(options: any) {
     this.setState(new PlaneRaceState());
@@ -44,26 +56,19 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     });
 
-    // Terima nama kustom pemain jika ada
-    this.onMessage("setName", (client, name: string) => {
-      const player = this.state.players.get(client.sessionId);
-      if (player && typeof name === "string" && name.trim().length > 0) {
-        player.name = name.trim().substring(0, 15);
-      }
-    });
-
     // Update loop 50 FPS (20ms) untuk kalkulasi server-authoritative
     this.setSimulationInterval((deltaTime) => this.update(deltaTime), 1000 / 50);
   }
 
-  onJoin(client: Client, options: any) {
-    console.log(`[Room] Player joined: ${client.sessionId}`);
+  onJoin(client: Client, options?: any, auth?: any) {
+    const userName = auth?.name || (options && options.name) || "Karyawan Baknus";
+    const userEmail = auth?.email || "";
+    console.log(`[Room] Player joined: ${client.sessionId} - ${userName} (${userEmail})`);
 
     const player = new Player();
     player.id = client.sessionId;
-    player.name = (options && options.name && options.name.trim()) 
-      ? options.name.trim().substring(0, 15) 
-      : `Karyawan #${this.state.players.size + 1}`;
+    player.name = userName;
+    player.email = userEmail;
     
     // Spawn di titik acak dengan padding aman
     player.x = 100 + Math.random() * 600;

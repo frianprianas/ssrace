@@ -36,7 +36,6 @@ export class GameScene extends Phaser.Scene {
   private client!: Colyseus.Client;
   private room!: Colyseus.Room;
   private serverUrl: string = "ws://localhost:2567";
-  private playerName: string = "Karyawan Teladan";
 
   // Entity tracking
   private players: Map<string, PlayerData> = new Map();
@@ -71,9 +70,8 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { serverUrl?: string; playerName?: string }) {
+  init(data: { serverUrl?: string }) {
     if (data.serverUrl) this.serverUrl = data.serverUrl;
-    if (data.playerName) this.playerName = data.playerName;
   }
 
   preload() {
@@ -97,8 +95,9 @@ export class GameScene extends Phaser.Scene {
     // 3. Setup UI HUD
     this.createHUD();
 
-    // 4. Hubungkan ke Server Colyseus
-    this.connectToServer();
+    // 4. Status Awal Menunggu Login
+    this.statusBadge.setText("MENUNGGU LOGIN BAKNUS MAIL");
+    this.statusBadge.setColor("#f59e0b");
   }
 
   private drawBackground() {
@@ -307,27 +306,33 @@ export class GameScene extends Phaser.Scene {
     this.modalContainer.add(this.modalSub);
   }
 
-  async connectToServer(customUrl?: string, customName?: string) {
-    if (customUrl) this.serverUrl = customUrl;
-    if (customName) this.playerName = customName;
+  async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string }) {
+    if (authOptions.serverUrl) this.serverUrl = authOptions.serverUrl;
 
     try {
       this.statusBadge.setText("MENGHUBUNGKAN KE KANTOR...");
+      this.statusBadge.setColor("#38bdf8");
       this.client = new Colyseus.Client(this.serverUrl);
 
-      // Join room atau buat baru jika room penuh (maxClients: 5)
+      // Join room dengan kredensial Baknus Mail
       this.room = await this.client.joinOrCreate("race_room", {
-        name: this.playerName,
+        email: authOptions.email,
+        password: authOptions.password,
+        token: authOptions.token,
       });
 
       console.log(`[Client] Berhasil bergabung ke room: ${this.room.id} (${this.room.sessionId})`);
-      this.statusBadge.setText("TERHUBUNG");
+      this.statusBadge.setText("TERHUBUNG (BAKNUS AUTH OK)");
+      this.statusBadge.setColor("#10b981");
 
       this.setupRoomListeners();
+      return { success: true, room: this.room };
     } catch (err: any) {
       console.error("[Client] Gagal konek ke server Colyseus:", err);
-      this.statusBadge.setText("GAGAL TERHUBUNG (Cek Server)");
+      const msg = err.message || "Gagal terhubung ke server.";
+      this.statusBadge.setText("AUTENTIKASI GAGAL");
       this.statusBadge.setColor("#ef4444");
+      throw new Error(msg);
     }
   }
 

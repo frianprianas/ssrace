@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSRace - Slim Survival Race | Corporate Satire Multiplayer 2D</title>
+  <title>SSRace - Slim Survival Race | Baknus Mail Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -14,27 +14,58 @@
     <!-- Top Corporate Header -->
     <header class="game-header">
       <div class="logo-group">
-        <span class="badge-satire">CORPORATE SURVIVAL SIMULATOR</span>
+        <span class="badge-satire">CORPORATE SURVIVAL SIMULATOR • BAKNUS MAIL EXCLUSIVE</span>
         <h1 class="logo-title">SSRace <span class="sub">Slim Survival Race</span></h1>
       </div>
 
-      <!-- Quick Connect Bar -->
-      <div class="connection-bar">
-        <div class="input-group">
-          <label for="server-url">Server WebSocket</label>
-          <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567">
+      <!-- User Session Info / Quick Bar -->
+      <div id="user-session-bar" class="connection-bar">
+        <div id="session-info" class="session-info" style="display: none;">
+          <span class="user-badge" id="badge-username">👤 Karyawan Baknus</span>
+          <span class="user-email" id="badge-email">user@smk.baktinusantara666.sch.id</span>
+          <button id="btn-logout" class="btn-secondary">Ganti Akun</button>
         </div>
-        <div class="input-group">
-          <label for="player-name">Nama Karyawan</label>
-          <input type="text" id="player-name" value="Karyawan Teladan" maxlength="15" placeholder="Nama Anda">
-        </div>
-        <button id="btn-connect" class="btn-primary">GABUNG RACE</button>
+        <button id="btn-open-login" class="btn-primary">🔐 LOGIN BAKNUS MAIL</button>
       </div>
     </header>
 
     <!-- Main Game Canvas Container -->
     <main class="canvas-wrapper">
-      <div id="game-container"></div>
+      <div id="game-container">
+        <!-- Overlay Modal Login Baknus Mail -->
+        <div id="login-modal" class="modal-overlay">
+          <div class="modal-card">
+            <div class="modal-header">
+              <span class="badge-satire">VERIFIKASI IDENTITAS KARYAWAN</span>
+              <h2>Login Baknus Mail</h2>
+              <p>Akses balapan hanya terbuka untuk pemegang akun resmi Baknus Mail.</p>
+            </div>
+
+            <form id="form-login" class="login-form">
+              <div class="input-group">
+                <label for="server-url">Server WebSocket</label>
+                <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567" required>
+              </div>
+
+              <div class="input-group">
+                <label for="input-email">Email Resmi Baknus Mail</label>
+                <input type="email" id="input-email" placeholder="nama@smk.baktinusantara666.sch.id" required>
+              </div>
+
+              <div class="input-group">
+                <label for="input-password">Password Email</label>
+                <input type="password" id="input-password" placeholder="••••••••" required>
+              </div>
+
+              <div id="login-error" class="login-alert" style="display: none;"></div>
+
+              <button type="submit" id="btn-submit-login" class="btn-primary btn-block">
+                🚀 MASUK ARENA BALAP
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <!-- Instruction / Legend Footer -->
       <div class="legend-panel">
