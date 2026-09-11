@@ -131,7 +131,19 @@ window.addEventListener("DOMContentLoaded", () => {
     inputUsername.value = savedUsername;
   }
 
+  const modalLobby = document.getElementById("lobby-modal") as HTMLDivElement;
+  const lobbyProfileUsername = document.getElementById("lobby-profile-username") as HTMLDivElement;
+  const lobbyStatTotal = document.getElementById("lobby-stat-total") as HTMLSpanElement;
+  const lobbyStatBest = document.getElementById("lobby-stat-best") as HTMLSpanElement;
+  const lobbyStatGames = document.getElementById("lobby-stat-games") as HTMLSpanElement;
+  const roomsGrid = document.getElementById("rooms-grid") as HTMLDivElement;
+  const btnRefreshRooms = document.getElementById("btn-refresh-rooms") as HTMLButtonElement;
+  const btnChangeRoom = document.getElementById("btn-change-room") as HTMLButtonElement;
+
   const touchControls = document.getElementById("touch-controls") as HTMLDivElement;
+
+  let currentAuthData: { serverUrl: string; email: string; password?: string; token?: string; username: string } | null = null;
+  let selectedRoomNumber: number = 1;
 
   const showModal = (show: boolean) => {
     if (modalLogin) {
@@ -140,16 +152,142 @@ window.addEventListener("DOMContentLoaded", () => {
     if (btnOpenLogin) {
       btnOpenLogin.style.display = show ? "none" : (ssoToken ? "none" : "block");
     }
-    if (touchControls) {
-      touchControls.style.display = show ? "none" : "flex";
+    if (touchControls && show) {
+      touchControls.style.display = "none";
     }
   };
 
+  const showLobby = async (show: boolean) => {
+    if (modalLobby) {
+      modalLobby.style.display = show ? "flex" : "none";
+    }
+    if (show) {
+      if (modalLogin) modalLogin.style.display = "none";
+      if (touchControls) touchControls.style.display = "none";
+      if (btnChangeRoom) btnChangeRoom.style.display = "none";
+      if (currentAuthData) {
+        await fetchProfile(currentAuthData.username);
+      }
+      await fetchRooms();
+    }
+  };
+
+  const fetchProfile = async (username: string) => {
+    try {
+      const res = await fetch(`/api/profile?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      if (data && data.profile) {
+        const p = data.profile;
+        if (lobbyProfileUsername) lobbyProfileUsername.innerText = p.username;
+        if (lobbyStatTotal) lobbyStatTotal.innerText = `⭐ ${p.totalScore.toLocaleString()} Pts`;
+        if (lobbyStatBest) lobbyStatBest.innerText = `🏆 ${p.highestScore.toLocaleString()} Pts`;
+        if (lobbyStatGames) lobbyStatGames.innerText = `🎮 ${p.gamesPlayed}x`;
+        updateSessionUI(p.username, p.totalScore);
+      }
+    } catch (e) {
+      console.warn("Gagal memuat profil:", e);
+    }
+  };
+
+  const fetchRooms = async () => {
+    if (!roomsGrid) return;
+    roomsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 20px;">⏳ Memuat kapasitas 10 Sektor...</div>`;
+
+    try {
+      const res = await fetch("/api/rooms");
+      const data = await res.json();
+      if (data && data.rooms) {
+        roomsGrid.innerHTML = data.rooms.map((r: any) => {
+          const isFull = r.clients >= r.maxClients;
+          let badgeClass = "room-badge-available";
+          if (isFull) badgeClass = "room-badge-full";
+          else if (r.clients > 0) badgeClass = "room-badge-active";
+
+          return `
+            <div class="room-card ${isFull ? 'room-full' : ''}" data-room="${r.roomNumber}">
+              <div class="room-title">Sektor ${r.roomNumber}</div>
+              <span class="room-badge-status ${badgeClass}">${r.status}</span>
+              <div class="room-capacity">👥 ${r.clients}/${r.maxClients}</div>
+              <button class="btn-join-room" data-room="${r.roomNumber}" ${isFull ? 'disabled' : ''}>
+                ${isFull ? 'PENUH' : 'GABUNG'}
+              </button>
+            </div>
+          `;
+        }).join("");
+
+        // Pasang event listener ke setiap tombol room
+        roomsGrid.querySelectorAll(".btn-join-room").forEach((elem) => {
+          elem.addEventListener("click", (e) => {
+            e.stopPropagation();
+            sounds.unlockAudio();
+            const target = e.currentTarget as HTMLElement;
+            const roomNum = parseInt(target.getAttribute("data-room") || "1");
+            joinRoom(roomNum);
+          });
+        });
+
+        roomsGrid.querySelectorAll(".room-card").forEach((elem) => {
+          elem.addEventListener("click", (e) => {
+            sounds.unlockAudio();
+            const target = e.currentTarget as HTMLElement;
+            if (target.classList.contains("room-full")) return;
+            const roomNum = parseInt(target.getAttribute("data-room") || "1");
+            joinRoom(roomNum);
+          });
+        });
+      }
+    } catch (err) {
+      roomsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #ef4444; padding: 20px;">Gagal memuat status room.</div>`;
+    }
+  };
+
+  const joinRoom = async (roomNumber: number) => {
+    if (!currentAuthData) return;
+    selectedRoomNumber = roomNumber;
+    showLobby(false);
+    showModal(false);
+
+    if (btnChangeRoom) btnChangeRoom.style.display = "inline-block";
+    if (touchControls) touchControls.style.display = "flex";
+
+    try {
+      const scene = game.scene.getScene("GameScene") as GameScene;
+      if (scene) {
+        await scene.connectToServer({
+          ...currentAuthData,
+          roomNumber: selectedRoomNumber
+        });
+      }
+    } catch (e: any) {
+      console.error("Gagal masuk ke room:", e);
+      alert(e.message || "Gagal masuk ke room.");
+      showLobby(true);
+    }
+  };
+
+  if (btnRefreshRooms) {
+    btnRefreshRooms.addEventListener("click", () => {
+      sounds.unlockAudio();
+      fetchRooms();
+    });
+  }
+
+  if (btnChangeRoom) {
+    btnChangeRoom.addEventListener("click", () => {
+      sounds.unlockAudio();
+      const scene = game.scene.getScene("GameScene") as GameScene;
+      if (scene) {
+        scene.cleanupEntities();
+      }
+      showLobby(true);
+    });
+  }
 
   // Handler Submit Login Form
   if (formLogin) {
     formLogin.addEventListener("submit", async (e) => {
       e.preventDefault();
+      sounds.unlockAudio();
       loginError.style.display = "none";
       btnSubmit.disabled = true;
       btnSubmit.innerText = "⏳ MEMVERIFIKASI AKUN...";
@@ -161,18 +299,16 @@ window.addEventListener("DOMContentLoaded", () => {
       const password = inputPassword.value;
 
       try {
-        const scene = game.scene.getScene("GameScene") as GameScene;
-        if (!scene) throw new Error("Game engine belum siap.");
-
-        await scene.connectToServer({ 
-          serverUrl, 
+        currentAuthData = {
+          serverUrl,
           email: fullEmail,
-          password 
-        });
+          password,
+          username
+        };
 
         localStorage.setItem("baknus_username", username);
         showModal(false);
-        updateSessionUI(username);
+        await showLobby(true);
       } catch (err: any) {
         console.error("Login gagal:", err);
         loginError.innerText = err.message || "Gagal masuk. Periksa username dan password Baknus Mail.";
@@ -188,26 +324,28 @@ window.addEventListener("DOMContentLoaded", () => {
   if (ssoToken) {
     setTimeout(async () => {
       const serverUrl = inputServer?.value.trim() || "ws://localhost:2567";
-      const scene = game.scene.getScene("GameScene") as GameScene;
-      if (scene) {
-        try {
-          await scene.connectToServer({ serverUrl, token: ssoToken });
-          showModal(false);
-          updateSessionUI(savedUsername || "Karyawan");
-        } catch (e) {
-          console.warn("SSO Token kedaluwarsa, tampilkan modal login.", e);
-          localStorage.removeItem("baknus_token");
-          showModal(true);
-        }
-      }
-    }, 500);
+      const username = savedUsername || "Karyawan";
+      const fullEmail = `${username}@smk.baktinusantara666.sch.id`;
+      currentAuthData = {
+        serverUrl,
+        email: fullEmail,
+        token: ssoToken,
+        username
+      };
+      showModal(false);
+      await showLobby(true);
+    }, 400);
   }
 
   // Tombol Ganti Akun / Logout
   if (btnLogout) {
     btnLogout.addEventListener("click", () => {
       localStorage.removeItem("baknus_token");
+      currentAuthData = null;
       if (sessionInfo) sessionInfo.style.display = "none";
+      if (modalLobby) modalLobby.style.display = "none";
+      const scene = game.scene.getScene("GameScene") as GameScene;
+      if (scene) scene.cleanupEntities();
       showModal(true);
     });
   }

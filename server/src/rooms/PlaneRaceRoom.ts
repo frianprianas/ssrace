@@ -42,6 +42,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   onCreate(options: any) {
+    const roomNumber = parseInt(options.roomNumber) || 1;
+    this.setMetadata({ roomNumber });
+    console.log(`[Room] Room diinisialisasi untuk Sektor ${roomNumber}`);
+
     this.setState(new PlaneRaceState());
 
     // Inisialisasi koin (8 koin meluncur bergantian dari atas)

@@ -503,12 +503,13 @@ export class GameScene extends Phaser.Scene {
     this.enemies.clear();
   }
 
-  async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string }) {
+  async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string; roomNumber?: number }) {
     this.lastAuthOptions = authOptions;
     if (authOptions.serverUrl) this.serverUrl = authOptions.serverUrl;
+    const roomNumber = authOptions.roomNumber || 1;
 
     try {
-      this.statusBadge.setText("MENGHUBUNGKAN KE SERVER...");
+      this.statusBadge.setText(`SEKTOR ${roomNumber} • MENGHUBUNGKAN...`);
       this.statusBadge.setColor("#38bdf8");
 
       // Bersihkan room dan objek sebelumnya secara menyeluruh agar tidak ada bekas kapal
@@ -525,10 +526,11 @@ export class GameScene extends Phaser.Scene {
         email: authOptions.email,
         password: authOptions.password,
         token: authOptions.token,
+        roomNumber: roomNumber,
       });
 
-      console.log(`[Client] Berhasil bergabung ke room: ${this.room.id} (${this.room.sessionId})`);
-      this.statusBadge.setText("TERHUBUNG (BAKNUS AUTH OK)");
+      console.log(`[Client] Berhasil bergabung ke Sektor ${roomNumber}: ${this.room.id} (${this.room.sessionId})`);
+      this.statusBadge.setText(`SEKTOR ${roomNumber} • AKTIF`);
       this.statusBadge.setColor("#10b981");
 
       this.setupRoomListeners();

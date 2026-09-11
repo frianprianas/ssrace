@@ -4,6 +4,7 @@ import cors from "cors";
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { matchMaker } from "colyseus";
 import { PlaneRaceRoom } from "./rooms/PlaneRaceRoom";
 import { ScoreDatabase } from "./db/scoreDatabase";
 
@@ -11,8 +12,8 @@ export default config({
   getId: () => "ssrace-game-server",
 
   initializeGameServer: (gameServer) => {
-    // Daftarkan room permainan SSRace
-    gameServer.define("race_room", PlaneRaceRoom);
+    // Daftarkan room permainan SSRace dengan pemisahan Room 1 s/d Room 10
+    gameServer.define("race_room", PlaneRaceRoom).filterBy(["roomNumber"]);
   },
 
   initializeExpress: (app) => {
@@ -40,7 +41,57 @@ export default config({
         endpoints: {
           ws: "ws://localhost:2567",
           monitor: "http://localhost:2567/colyseus",
-          leaderboard: "http://localhost:2567/api/leaderboard"
+          leaderboard: "http://localhost:2567/api/leaderboard",
+          rooms: "http://localhost:2567/api/rooms",
+          profile: "http://localhost:2567/api/profile"
+        }
+      });
+    });
+
+    // API Status Live Room 1 s/d 10
+    app.get("/api/rooms", async (req, res) => {
+      try {
+        const activeRooms = await matchMaker.query({ name: "race_room" });
+        const rooms = [];
+        for (let i = 1; i <= 10; i++) {
+          const matched = activeRooms.find((r: any) => r.metadata && r.metadata.roomNumber === i);
+          const clients = matched ? matched.clients : 0;
+          const maxClients = 5;
+          let statusText = "Tersedia";
+          if (clients >= maxClients) statusText = "Penuh";
+          else if (clients > 0) statusText = "Sedang Bertempur";
+
+          rooms.push({
+            roomNumber: i,
+            name: `Sektor ${i}`,
+            clients,
+            maxClients,
+            status: statusText,
+            isFull: clients >= maxClients
+          });
+        }
+        res.json({ success: true, rooms });
+      } catch (err: any) {
+        res.status(500).json({ success: false, error: err.message });
+      }
+    });
+
+    // API Profil Akumulasi Karyawan
+    app.get("/api/profile", (req, res) => {
+      const username = (req.query.username as string || "").trim();
+      if (!username) {
+        return res.status(400).json({ success: false, message: "Parameter username diperlukan" });
+      }
+      const record = ScoreDatabase.getInstance().getRecord(username);
+      res.json({
+        success: true,
+        profile: record || {
+          username: username.toLowerCase(),
+          email: `${username}@smk.baktinusantara666.sch.id`,
+          totalScore: 0,
+          highestScore: 0,
+          gamesPlayed: 0,
+          lastPlayed: new Date().toISOString()
         }
       });
     });
