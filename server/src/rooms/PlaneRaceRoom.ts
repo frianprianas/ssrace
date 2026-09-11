@@ -20,6 +20,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private timerAccumulator: number = 0;
   private finishedTimer: number = 0;
   private bulletIdCounter: number = 0;
+  private playerBumpTimes: Map<string, number> = new Map();
 
   // Profil Pesawat Tempur Musuh
   private enemyTemplates = [
@@ -60,9 +61,9 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       const player = this.state.players.get(client.sessionId);
 
       if (player && !player.isEliminated) {
-        // Kontrol 3 Langkah Maju-Mundur Vertikal (Step 0: Bawah, 1: Tengah, 2: Atas)
+        // Kontrol Maju-Mundur Vertikal (Posisi Netral: 2, Maju 2 langkah s/d 4, Mundur 2 langkah s/d 0)
         if (data.up && !prev.up) {
-          player.stepY = Math.min(2, player.stepY + 1);
+          player.stepY = Math.min(4, player.stepY + 1);
         }
         if (data.down && !prev.down) {
           player.stepY = Math.max(0, player.stepY - 1);
@@ -97,10 +98,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     const dbRecord = ScoreDatabase.getInstance().getRecord(userName);
     player.cumulativeScore = dbRecord ? dbRecord.totalScore : 0;
 
-    // Inisialisasi posisi dan status
+    // Inisialisasi posisi dan status: SEMUA pemain mulai di row netral yang sama (stepY = 2)
     const totalCurrent = this.state.players.size;
     player.x = 160 + (totalCurrent * 120) % 500;
-    player.stepY = (totalCurrent % 3); // Berbeda tingkat langkah awal
+    player.stepY = 2; // Posisi netral seragam untuk semua pemain
     player.y = this.getStepYCoordinate(player.stepY);
     player.colorIndex = totalCurrent % 5;
     player.score = 0;
@@ -137,15 +138,17 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.playerInputs.clear();
     this.prevUpDown.clear();
     this.lastShootTimes.clear();
+    this.playerBumpTimes.clear();
   }
 
   private getStepYCoordinate(step: number): number {
-    // Step 0: Paling Belakang (535)
-    // Step 1: Tengah (495)
-    // Step 2: Paling Depan (455)
-    if (step === 2) return 455;
-    if (step === 0) return 535;
-    return 495;
+    // Step 0: Mundur 2 langkah (580)
+    // Step 1: Mundur 1 langkah (545)
+    // Step 2: Posisi Netral / Default untuk SEMUA pemain (510)
+    // Step 3: Maju 1 langkah (475)
+    // Step 4: Maju 2 langkah (440)
+    const clamped = Math.max(0, Math.min(4, step));
+    return 510 - (clamped - 2) * 35;
   }
 
   private checkGameLifecycle() {
@@ -285,7 +288,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     });
 
-    // 3. Deteksi Tabrakan Antar Pemain (Efek Terpental)
+    // 3. Deteksi Tabrakan Antar Pemain (Efek Fisika Beradu & Terpental)
     const playerArray: Player[] = [];
     this.state.players.forEach((p) => {
       if (!p.isEliminated) playerArray.push(p);
@@ -296,21 +299,42 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         const p1 = playerArray[i];
         const p2 = playerArray[j];
         const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        const minDist = 38;
+        const minDist = 38; // Jarak benturan fisik antar sayap/badan pesawat
 
         if (dist < minDist && dist > 0.001) {
           const overlap = (minDist - dist);
           const nx = (p1.x - p2.x) / dist;
           const ny = (p1.y - p2.y) / dist;
 
-          const push = overlap * 0.6 + 2;
-          p1.x += nx * push;
-          p1.y += ny * push;
-          p2.x -= nx * push;
-          p2.y -= ny * push;
+          // Gaya tolak fisika (pantulan elastis antar pesawat)
+          const pushForce = overlap * 0.7 + 8;
+          p1.x += nx * pushForce;
+          p1.y += ny * (pushForce * 0.5);
+          p2.x -= nx * pushForce;
+          p2.y -= ny * (pushForce * 0.5);
 
           p1.x = Math.max(35, Math.min(765, p1.x));
           p2.x = Math.max(35, Math.min(765, p2.x));
+          p1.y = Math.max(430, Math.min(590, p1.y));
+          p2.y = Math.max(430, Math.min(590, p2.y));
+
+          // Broadcast efek fisika ke semua client (dibatasi 220ms per pasangan)
+          const pairKey = p1.id < p2.id ? `${p1.id}_${p2.id}` : `${p2.id}_${p1.id}`;
+          const lastBump = this.playerBumpTimes.get(pairKey) || 0;
+          if (now - lastBump > 220) {
+            this.playerBumpTimes.set(pairKey, now);
+            this.broadcast("player_bump", {
+              x: (p1.x + p2.x) / 2,
+              y: (p1.y + p2.y) / 2,
+              p1Id: p1.id,
+              p2Id: p2.id,
+              p1Name: p1.name,
+              p2Name: p2.name,
+              nx,
+              ny,
+              force: Math.min(30, pushForce * 1.5)
+            });
+          }
         }
       }
     }
@@ -501,8 +525,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.hp = Math.max(0, player.hp - 1);
     player.invulnerableTimer = 1.8; // Kebal 1.8 detik
     player.score = Math.max(0, player.score - 30);
-    player.stepY = 0; // Terpental ke belakang
-    player.y = this.getStepYCoordinate(0);
+    player.stepY = Math.max(0, player.stepY - 1); // Terpental mundur 1 langkah
+    player.y = this.getStepYCoordinate(player.stepY);
 
     console.log(`[Room] Player ${player.name} terkena ${sourceName}. Sisa HP: ${player.hp}/3`);
 
@@ -615,7 +639,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       player.score = 0;
       player.hp = 3;
       player.isEliminated = false;
-      player.stepY = idx % 3;
+      player.stepY = 2; // Posisi netral seragam untuk semua pemain
       player.x = 160 + (idx * 120) % 500;
       player.y = this.getStepYCoordinate(player.stepY);
       player.invulnerableTimer = 2.0;

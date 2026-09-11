@@ -364,6 +364,48 @@ class SoundManager {
       osc.stop(noteTime + 0.35);
     });
   }
+
+  playBump() {
+    if (!this.sfxEnabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    
+    // Suara pantulan benturan bodi / perisai pesawat (metallic punch + spring bounce)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(75, now + 0.16);
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.16);
+
+    // Harmonic click for tactile mechanical impact
+    try {
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+      clickOsc.type = "square";
+      clickOsc.frequency.setValueAtTime(750, now);
+      clickOsc.frequency.exponentialRampToValueAtTime(140, now + 0.05);
+      clickGain.gain.setValueAtTime(0.18, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(this.ctx.destination);
+
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.05);
+    } catch (e) {}
+  }
 }
 
 export const sounds = new SoundManager();

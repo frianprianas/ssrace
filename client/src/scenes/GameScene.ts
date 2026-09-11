@@ -923,6 +923,59 @@ export class GameScene extends Phaser.Scene {
     this.room.onMessage("game_over", () => {
       sounds.playGameOver();
     });
+
+    // 7. Efek Fisika Saat 2 Pesawat Pemain Beradu
+    this.room.onMessage("player_bump", (data: any) => {
+      sounds.playBump();
+      this.createPhysicsBumpEffect(data.x, data.y, data.nx, data.ny);
+
+      const isLocalInvolved = (data.p1Id === this.room.sessionId || data.p2Id === this.room.sessionId);
+      if (isLocalInvolved) {
+        this.cameras.main.shake(110, 0.006); // Micro haptic shake
+      }
+
+      // Animasi sentakan miring & deformasi elastis (squash & stretch)
+      const p1Data = this.players.get(data.p1Id);
+      const p2Data = this.players.get(data.p2Id);
+
+      if (p1Data && p1Data.container) {
+        this.tweens.killTweensOf(p1Data.container);
+        this.tweens.add({
+          targets: p1Data.container,
+          angle: (data.nx >= 0 ? 1 : -1) * 12,
+          scaleX: 1.2,
+          scaleY: 0.8,
+          duration: 75,
+          yoyo: true,
+          ease: "Quad.easeOut",
+          onComplete: () => {
+            if (p1Data.container) {
+              p1Data.container.angle = 0;
+              p1Data.container.setScale(1, 1);
+            }
+          }
+        });
+      }
+
+      if (p2Data && p2Data.container) {
+        this.tweens.killTweensOf(p2Data.container);
+        this.tweens.add({
+          targets: p2Data.container,
+          angle: (data.nx >= 0 ? -1 : 1) * 12,
+          scaleX: 1.2,
+          scaleY: 0.8,
+          duration: 75,
+          yoyo: true,
+          ease: "Quad.easeOut",
+          onComplete: () => {
+            if (p2Data.container) {
+              p2Data.container.angle = 0;
+              p2Data.container.setScale(1, 1);
+            }
+          }
+        });
+      }
+    });
   }
 
   private createExplosionEffect(x: number, y: number, isBig: boolean = false) {
@@ -1114,6 +1167,59 @@ export class GameScene extends Phaser.Scene {
       e.container.x = Phaser.Math.Linear(e.container.x, e.targetX, 0.3);
       e.container.y = Phaser.Math.Linear(e.container.y, e.targetY, 0.3);
       e.exhaust.scaleY = 0.8 + Math.random() * 0.4;
+    });
+  }
+
+  /**
+   * Efek partikel percikan listrik & shockwave cincin energi saat 2 pesawat beradu
+   */
+  private createPhysicsBumpEffect(x: number, y: number, nx: number, ny: number) {
+    // 1. Percikan bunga api listrik (sparks)
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      const spark = this.add.graphics().setDepth(150);
+      const color = i % 2 === 0 ? 0x00f0ff : 0xffd700;
+      spark.fillStyle(color, 1);
+      spark.fillCircle(0, 0, 2 + Math.random() * 2);
+      spark.x = x;
+      spark.y = y;
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 80;
+      const targetX = x + Math.cos(angle) * speed + nx * 20;
+      const targetY = y + Math.sin(angle) * speed + ny * 15;
+
+      this.tweens.add({
+        targets: spark,
+        x: targetX,
+        y: targetY,
+        alpha: 0,
+        scale: 0.2,
+        duration: 220 + Math.random() * 120,
+        ease: "Cubic.easeOut",
+        onComplete: () => {
+          spark.destroy();
+        }
+      });
+    }
+
+    // 2. Cincin shockwave benturan
+    const shockwave = this.add.graphics().setDepth(149);
+    shockwave.lineStyle(2, 0x00f0ff, 0.9);
+    shockwave.strokeCircle(0, 0, 10);
+    shockwave.x = x;
+    shockwave.y = y;
+
+    this.tweens.add({
+      targets: shockwave,
+      scaleX: 2.6,
+      scaleY: 2.6,
+      alpha: 0,
+      duration: 200,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        shockwave.destroy();
+      }
     });
   }
 }

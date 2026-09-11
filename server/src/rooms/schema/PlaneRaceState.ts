@@ -15,7 +15,7 @@ export class Player extends Schema {
   @type("string") email: string = "";
   @type("number") x: number = 400;
   @type("number") y: number = 510; // Zona pertahanan bawah
-  @type("number") stepY: number = 1; // 3 Langkah: 0 (bawah: 535), 1 (tengah: 495), 2 (atas: 455)
+  @type("number") stepY: number = 2; // Posisi Netral: 2. Range 0 (Mundur 2 langkah: 580) s/d 4 (Maju 2 langkah: 440)
   @type("number") score: number = 0;
   @type("number") cumulativeScore: number = 0; // Akumulasi total skor dari database
   @type("number") hp: number = 3; // Nyawa pemain (Maks 3x tembakan)
