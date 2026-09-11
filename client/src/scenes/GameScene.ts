@@ -111,6 +111,10 @@ export class GameScene extends Phaser.Scene {
   private elimCountdownText!: Phaser.GameObjects.Text;
   private eliminatedTimer: any = null;
 
+  // Status & Skor untuk Integrasi Sosial BaknusID
+  private currentLocalScore: number = 0;
+  private lastIsVictory: boolean = false;
+
   // Start Countdown Visual Overlay (Hitung Mundur 3.. 2.. 1.. GO!)
   private countdownContainer: Phaser.GameObjects.Container | null = null;
   private countdownText: Phaser.GameObjects.Text | null = null;
@@ -540,12 +544,12 @@ export class GameScene extends Phaser.Scene {
 
     const backdrop = this.add.graphics();
     backdrop.fillStyle(0x050b14, 0.94);
-    backdrop.fillRoundedRect(-210, -150, 420, 300, 16);
+    backdrop.fillRoundedRect(-215, -170, 430, 345, 16);
     backdrop.lineStyle(2, 0xffd700, 0.85);
-    backdrop.strokeRoundedRect(-210, -150, 420, 300, 16);
+    backdrop.strokeRoundedRect(-215, -170, 430, 345, 16);
     this.modalContainer.add(backdrop);
 
-    this.modalTitle = this.add.text(0, -105, "🏁 MISI SELESAI 🏁", {
+    this.modalTitle = this.add.text(0, -128, "🏁 MISI SELESAI 🏁", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "20px",
       fontStyle: "bold",
@@ -553,7 +557,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalTitle);
 
-    this.modalWinner = this.add.text(0, -25, "Menghitung hasil pertempuran...", {
+    this.modalWinner = this.add.text(0, -62, "Menghitung hasil pertempuran...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "15px",
       fontStyle: "bold",
@@ -563,7 +567,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalWinner);
 
-    this.modalSub = this.add.text(0, 45, "Poin Anda telah diakumulasikan ke Database Kantor!\nMengalihkan ke Lobi dalam 7 detik...", {
+    this.modalSub = this.add.text(0, 10, "Poin Anda telah diakumulasikan ke Database Kantor!\nMengalihkan ke Lobi dalam 7 detik...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "11px",
       color: "#94a3b8",
@@ -571,23 +575,45 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalSub);
 
-    // Tombol Kembali ke Lobi Sektor
+    // Tombol 1: Update Status Kemenangan di BaknusID
+    const btnBaknusBg = this.add.graphics();
+    btnBaknusBg.fillStyle(0x0284c7, 1);
+    btnBaknusBg.fillRoundedRect(-140, 52, 280, 40, 8);
+    btnBaknusBg.lineStyle(1.5, 0x38bdf8, 0.9);
+    btnBaknusBg.strokeRoundedRect(-140, 52, 280, 40, 8);
+    this.modalContainer.add(btnBaknusBg);
+
+    const btnBaknusText = this.add.text(0, 72, "📢 UPDATE STATUS DI BAKNUSID", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12.5px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    }).setOrigin(0.5);
+    this.modalContainer.add(btnBaknusText);
+
+    const hitZoneBaknus = this.add.zone(0, 72, 280, 40).setInteractive({ cursor: "pointer" });
+    hitZoneBaknus.on("pointerdown", () => {
+      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, this.lastIsVictory);
+    });
+    this.modalContainer.add(hitZoneBaknus);
+
+    // Tombol 2: Kembali ke Lobi Sektor
     const btnLobbyBg = this.add.graphics();
     btnLobbyBg.fillStyle(0x10b981, 1);
-    btnLobbyBg.fillRoundedRect(-140, 85, 280, 42, 8);
+    btnLobbyBg.fillRoundedRect(-140, 104, 280, 40, 8);
     btnLobbyBg.lineStyle(1.5, 0x34d399, 0.8);
-    btnLobbyBg.strokeRoundedRect(-140, 85, 280, 42, 8);
+    btnLobbyBg.strokeRoundedRect(-140, 104, 280, 40, 8);
     this.modalContainer.add(btnLobbyBg);
 
-    const btnLobbyText = this.add.text(0, 106, "🚪 KEMBALI KE LOBBY SEKARANG", {
+    const btnLobbyText = this.add.text(0, 124, "🚪 KEMBALI KE LOBBY SEKARANG", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "13px",
+      fontSize: "12.5px",
       fontStyle: "bold",
       color: "#050b14"
     }).setOrigin(0.5);
     this.modalContainer.add(btnLobbyText);
 
-    const hitZone = this.add.zone(0, 106, 280, 42).setInteractive({ cursor: "pointer" });
+    const hitZone = this.add.zone(0, 124, 280, 40).setInteractive({ cursor: "pointer" });
     hitZone.on("pointerdown", () => {
       this.modalContainer.setVisible(false);
       if (this.onReturnToLobby) {
@@ -602,61 +628,93 @@ export class GameScene extends Phaser.Scene {
 
     const backdrop = this.add.graphics();
     backdrop.fillStyle(0x0a0508, 0.95);
-    backdrop.fillRoundedRect(-220, -165, 440, 330, 16);
+    backdrop.fillRoundedRect(-220, -175, 440, 350, 16);
     backdrop.lineStyle(2.5, 0xef4444, 0.9);
-    backdrop.strokeRoundedRect(-220, -165, 440, 330, 16);
+    backdrop.strokeRoundedRect(-220, -175, 440, 350, 16);
     this.eliminatedModal.add(backdrop);
 
-    const title = this.add.text(0, -112, "💥 TERELIMINASI! (GAME OVER) 💥", {
+    const title = this.add.text(0, -132, "💥 TERELIMINASI! (GAME OVER) 💥", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "20px",
+      fontSize: "19px",
       fontStyle: "bold",
       color: "#ef4444",
     }).setOrigin(0.5);
     this.eliminatedModal.add(title);
 
-    this.elimReasonText = this.add.text(0, -60, "Pesawat Anda terkena tembakan musuh 5x!", {
+    this.elimReasonText = this.add.text(0, -85, "Pesawat Anda terkena tembakan musuh!", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "13px",
+      fontSize: "12.5px",
       color: "#fca5a5",
       align: "center",
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimReasonText);
 
-    this.elimScoreText = this.add.text(0, 5, "Skor Match: 0 Poin\nTotal Akumulasi Kantor: 0 Poin", {
+    this.elimScoreText = this.add.text(0, -22, "Skor Match: 0 Poin\nTotal Akumulasi: 0 Poin", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "14px",
+      fontSize: "13px",
       fontStyle: "bold",
       color: "#ffd700",
       align: "center",
-      lineSpacing: 8,
+      lineSpacing: 5,
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimScoreText);
 
     // Subtext countdown otomatis keluar ke Lobi
-    this.elimCountdownText = this.add.text(0, 56, "Otomatis kembali ke Lobi dalam 6 detik...", {
+    this.elimCountdownText = this.add.text(0, 28, "Otomatis kembali ke Lobi dalam 6 detik...", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "12px",
+      fontSize: "11px",
       color: "#94a3b8",
       align: "center"
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimCountdownText);
 
-    // Tombol Keluar Hangar ke Lobi Sektor (Pilih Room Kembali)
+    // Tombol 1: Update Status di BaknusID (Kalah/Eliminasi)
+    const btnBaknusElimBg = this.add.graphics();
+    btnBaknusElimBg.fillStyle(0x7c3aed, 1);
+    btnBaknusElimBg.fillRoundedRect(-140, 56, 280, 40, 8);
+    btnBaknusElimBg.lineStyle(1.5, 0xa78bfa, 0.9);
+    btnBaknusElimBg.strokeRoundedRect(-140, 56, 280, 40, 8);
+    this.eliminatedModal.add(btnBaknusElimBg);
+
+    const btnBaknusElimText = this.add.text(0, 76, "📢 UPDATE STATUS DI BAKNUSID", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12.5px",
+      fontStyle: "bold",
+      color: "#ffffff",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(btnBaknusElimText);
+
+    const hitZoneBaknusElim = this.add.zone(0, 76, 280, 40).setInteractive({ cursor: "pointer" });
+    hitZoneBaknusElim.on("pointerdown", () => {
+      // Hentikan timer auto-close agar pemain sempat memposting status
+      if (this.eliminatedTimer) {
+        clearInterval(this.eliminatedTimer);
+        this.eliminatedTimer = null;
+      }
+      if (this.elimCountdownText) {
+        this.elimCountdownText.setText("Menghubungkan ke BaknusID...");
+      }
+      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, false);
+    });
+    this.eliminatedModal.add(hitZoneBaknusElim);
+
+    // Tombol 2: Keluar Hangar ke Lobi Sektor (Pilih Room Kembali)
     const btnLobby = this.add.graphics();
     btnLobby.fillStyle(0x38bdf8, 1);
-    btnLobby.fillRoundedRect(-145, 80, 290, 46, 8);
+    btnLobby.fillRoundedRect(-140, 106, 280, 40, 8);
+    btnLobby.lineStyle(1.5, 0x7dd3fc, 0.9);
+    btnLobby.strokeRoundedRect(-140, 106, 280, 40, 8);
     this.eliminatedModal.add(btnLobby);
 
-    const btnText = this.add.text(0, 103, "🚪 KELUAR KE LOBI (PILIH ROOM)", {
+    const btnText = this.add.text(0, 126, "🚪 KELUAR KE LOBI (PILIH ROOM)", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "14px",
+      fontSize: "12.5px",
       fontStyle: "bold",
       color: "#050b14",
     }).setOrigin(0.5);
     this.eliminatedModal.add(btnText);
 
-    const hitZone = this.add.zone(0, 103, 290, 46).setInteractive({ cursor: "pointer" });
+    const hitZone = this.add.zone(0, 126, 280, 40).setInteractive({ cursor: "pointer" });
     hitZone.on("pointerdown", () => {
       this.eliminatedModal.setVisible(false);
       if (this.eliminatedTimer) {
@@ -668,6 +726,63 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.eliminatedModal.add(hitZone);
+  }
+
+  /**
+   * Mengirim event update status ke host WebView aplikasi BaknusID
+   */
+  public triggerBaknusIDStatusUpdate(score: number, isVictory: boolean = false) {
+    const safeScore = Math.max(0, score || this.currentLocalScore || 0);
+    const statusText = isVictory
+      ? `Saya baru saja mengalahkan Armada Induk Alien TaYa di SSRace dengan skor ${safeScore}! 🚀🛸 #SSRace #BaknusID`
+      : `Saya telah bermain game SSRace dengan skor ${safeScore}! 💥🚀 #SSRace #BaknusID`;
+
+    console.log(`[BaknusIDBridge] Trigger status update: isVictory=${isVictory}, score=${safeScore}`);
+
+    this.spawnFloatingText(300, 260, "📢 Membuka Form Status BaknusID...", "#38bdf8");
+
+    const payload = {
+      action: "UPDATE_STATUS",
+      game: "ssrace",
+      isVictory: isVictory,
+      score: safeScore,
+      text: statusText
+    };
+
+    const win = window as any;
+
+    // 1. Prioritas Utama: Flutter WebView JavascriptChannel 'BaknusIDBridge'
+    if (win.BaknusIDBridge && typeof win.BaknusIDBridge.postMessage === 'function') {
+      try {
+        win.BaknusIDBridge.postMessage(JSON.stringify(payload));
+        return;
+      } catch (e) {
+        console.error("[BaknusIDBridge] Error postMessage:", e);
+      }
+    }
+
+    // 2. Flutter InAppWebView (callHandler)
+    if (win.flutter_inappwebview && typeof win.flutter_inappwebview.callHandler === 'function') {
+      try {
+        win.flutter_inappwebview.callHandler('BaknusIDBridge', payload);
+        return;
+      } catch (e) {
+        console.error("[BaknusIDBridge] Error flutter_inappwebview:", e);
+      }
+    }
+
+    // 3. Fallback jika dibuka di browser luar (Web Share API & Deep Link)
+    if (navigator.share) {
+      navigator.share({
+        title: "SSRace - Earth Defense Protocol",
+        text: statusText,
+        url: window.location.href
+      }).catch(() => {
+        window.location.href = `baknusid://post?text=${encodeURIComponent(statusText)}`;
+      });
+    } else {
+      window.location.href = `baknusid://post?text=${encodeURIComponent(statusText)}`;
+    }
   }
 
   /**
@@ -1036,6 +1151,7 @@ export class GameScene extends Phaser.Scene {
         playerData.hpText.setText(currentHearts);
 
         if (isLocal) {
+          this.currentLocalScore = player.score;
           this.myScoreText.setText(`MATCH: ${player.score}`);
           this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
           this.updateHUDHealthBar(player.hp, player.maxHp || 5, pLives, player.maxLives || 3);
@@ -1415,6 +1531,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
+      this.currentLocalScore = (data.matchScore !== undefined) ? data.matchScore : this.currentLocalScore;
+      this.lastIsVictory = false;
+
       this.elimReasonText.setText(data.message || "Seluruh 3 Nyawa Pesawat Anda telah habis!");
       this.elimScoreText.setText(
         `Skor Misi Ini: ${data.matchScore} Poin\n` +
@@ -1459,6 +1578,12 @@ export class GameScene extends Phaser.Scene {
 
     this.room.onMessage("game_over", (data: any) => {
       sounds.playGameOver();
+      this.lastIsVictory = Boolean(data && data.isVictory);
+      if (this.room) {
+        const myP = this.room.state.players.get(this.room.sessionId);
+        if (myP) this.currentLocalScore = myP.score;
+      }
+
       if (data && data.isVictory) {
         this.modalTitle.setText("🏆 MISI BERHASIL! 🏆").setColor("#10b981");
         this.modalWinner.setText(`Alien TaYa Berhasil Dikalahkan!\n⭐ Pahlawan: ${data.winnerName} ⭐\nSkor Tertinggi: ${data.winnerScore} Pts`);
