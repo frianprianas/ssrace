@@ -105,7 +105,9 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.y = this.getStepYCoordinate(player.stepY);
     player.colorIndex = totalCurrent % 5;
     player.score = 0;
-    player.hp = 5; // 5 Nyawa / Bar Darah penuh
+    player.lives = 3; // 3 Nyawa tetap
+    player.maxLives = 3;
+    player.hp = 5; // Bar darah per nyawa (5x tembakan sebelum 1 nyawa hilang)
     player.maxHp = 5;
     player.isEliminated = false;
     player.invulnerableTimer = 2.0; // Kebal 2 detik saat baru join
@@ -519,29 +521,50 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   /**
-   * Logika Pengurangan Nyawa (HP) saat tertembak atau tertabrak
+   * Logika Pengurangan Darah (HP) & Nyawa (Lives):
+   * Nyawa pemain tetap 3. Setiap nyawa memiliki bar darah 5x tembakan.
+   * Jika bar darah habis (5x hit), 1 nyawa hilang dan darah di-reset kembali 5/5.
+   * Jika ke-3 nyawa habis, barulah pemain tereliminasi (Game Over).
    */
   private damagePlayer(player: Player, sessionId: string, sourceName: string) {
     player.hp = Math.max(0, player.hp - 1);
-    player.invulnerableTimer = 1.8; // Kebal 1.8 detik
-    player.score = Math.max(0, player.score - 30);
+    player.invulnerableTimer = 1.2; // Kebal 1.2 detik saat terkena tembakan biasa
+    player.score = Math.max(0, player.score - 20);
     player.stepY = Math.max(0, player.stepY - 1); // Terpental mundur 1 langkah
     player.y = this.getStepYCoordinate(player.stepY);
 
-    console.log(`[Room] Player ${player.name} terkena ${sourceName}. Sisa HP: ${player.hp}/5`);
+    let lifeLost = false;
+
+    // Jika bar darah habis (5x tembakan untuk nyawa ini)
+    if (player.hp <= 0) {
+      player.lives = Math.max(0, player.lives - 1);
+      lifeLost = true;
+
+      if (player.lives > 0) {
+        // Reset bar darah kembali penuh (5/5) untuk nyawa berikutnya
+        player.hp = player.maxHp;
+        player.invulnerableTimer = 2.5; // Kebal darurat 2.5 detik saat nyawa berkurang
+        console.log(`[Room] Player ${player.name} KEHILANGAN 1 NYAWA! Sisa Nyawa: ${player.lives}/${player.maxLives}, Darah di-reset: 5/5`);
+      }
+    }
+
+    console.log(`[Room] Player ${player.name} terkena ${sourceName}. Darah: ${player.hp}/${player.maxHp}, Nyawa: ${player.lives}/${player.maxLives}`);
 
     this.broadcast("player_damaged", {
       playerId: sessionId,
       playerName: player.name,
       hpRemaining: player.hp,
       maxHp: player.maxHp,
+      livesRemaining: player.lives,
+      maxLives: player.maxLives,
+      lifeLost: lifeLost,
       source: sourceName,
       x: player.x,
       y: player.y
     });
 
-    // Jika tertembak 5x (HP habis), Game Over dan Kick dari room!
-    if (player.hp <= 0) {
+    // Jika seluruh 3 nyawa habis, pemain tereliminasi!
+    if (player.lives <= 0) {
       this.eliminatePlayer(player, sessionId, sourceName);
     }
   }
@@ -579,7 +602,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     if (client) {
       // Kirim pesan langsung ke klien yang bersangkutan
       client.send("you_are_eliminated", {
-        message: `Pesawat Anda hancur terkena serangan 5x oleh ${killerSource}!`,
+        message: `Seluruh 3 Nyawa Pesawat Anda habis terkena serangan ${killerSource}!`,
         matchScore: player.score,
         totalScore: record.totalScore,
         highestScore: record.highestScore,
@@ -637,6 +660,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     let idx = 0;
     this.state.players.forEach((player) => {
       player.score = 0;
+      player.lives = 3;
+      player.maxLives = 3;
       player.hp = 5;
       player.maxHp = 5;
       player.isEliminated = false;

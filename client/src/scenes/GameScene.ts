@@ -376,8 +376,8 @@ export class GameScene extends Phaser.Scene {
       color: "#a855f7",
     }).setOrigin(1, 0.5).setDepth(101);
 
-    // Inisialisasi awal render HUD health bar
-    this.updateHUDHealthBar(5, 5);
+    // Inisialisasi awal render HUD health bar (5 bar darah, 3 nyawa)
+    this.updateHUDHealthBar(5, 5, 3, 3);
 
     // Leaderboard Match Box (Top 5) di kanan atas
     this.leaderboardContainer = this.add.container(444, 64).setDepth(100);
@@ -627,14 +627,15 @@ export class GameScene extends Phaser.Scene {
         color: isLocal ? "#00f0ff" : "#f1f5f9",
       }).setOrigin(0.5);
 
-      // Mini Health Bar mengambang LEBIH TINGGI di atas badan pesawat agar jelas terlihat
+      // Mini Health Bar mengambang LEBIH TINGGI di atas badan pesawat (Progress Darah 5x tembakan)
       const hpBarGfx = this.add.graphics();
       this.renderShipHpBar(hpBarGfx, player.hp || 5, 5);
 
-      // Ikon Nyawa Hati
-      const hpHearts = "❤️".repeat(Math.max(0, player.hp || 5)) + "🖤".repeat(Math.max(0, 5 - (player.hp || 5)));
+      // Ikon 3 Nyawa Hati (Tetap 3 Nyawa)
+      const initialLives = player.lives !== undefined ? player.lives : 3;
+      const hpHearts = "❤️".repeat(Math.max(0, initialLives)) + "🖤".repeat(Math.max(0, 3 - initialLives));
       const hpText = this.add.text(0, -10, hpHearts, {
-        fontSize: "8px"
+        fontSize: "8.5px"
       }).setOrigin(0.5);
 
       // Skor kecil
@@ -667,7 +668,7 @@ export class GameScene extends Phaser.Scene {
       if (isLocal) {
         this.myScoreText.setText(`MATCH: ${player.score}`);
         this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
-        this.updateHUDHealthBar(player.hp || 5, 5);
+        this.updateHUDHealthBar(player.hp || 5, 5, initialLives, 3);
       }
 
       player.onChange(() => {
@@ -676,16 +677,17 @@ export class GameScene extends Phaser.Scene {
         playerData.scoreText.setText(`⭐ ${player.score}`);
 
         if (playerData.hpBarGfx) {
-          this.renderShipHpBar(playerData.hpBarGfx, player.hp, 5);
+          this.renderShipHpBar(playerData.hpBarGfx, player.hp, player.maxHp || 5);
         }
 
-        const currentHearts = "❤️".repeat(Math.max(0, player.hp)) + "🖤".repeat(Math.max(0, 5 - player.hp));
+        const pLives = player.lives !== undefined ? player.lives : 3;
+        const currentHearts = "❤️".repeat(Math.max(0, pLives)) + "🖤".repeat(Math.max(0, 3 - pLives));
         playerData.hpText.setText(currentHearts);
 
         if (isLocal) {
           this.myScoreText.setText(`MATCH: ${player.score}`);
           this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
-          this.updateHUDHealthBar(player.hp, 5);
+          this.updateHUDHealthBar(player.hp, player.maxHp || 5, pLives, player.maxLives || 3);
 
           const badgeTotal = document.getElementById("badge-total-score");
           if (badgeTotal) {
@@ -902,21 +904,26 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("player_damaged", (data: any) => {
-      this.createExplosionEffect(data.x, data.y, true);
-      sounds.playExplosion(true);
-      this.spawnFloatingText(data.x, data.y, `💥 KENA SERANGAN! (-1 DARAH, SISA: ${data.hpRemaining}/5)`, "#ef4444");
+      this.createExplosionEffect(data.x, data.y, data.lifeLost);
+      sounds.playExplosion(data.lifeLost);
+
+      if (data.lifeLost) {
+        this.spawnFloatingText(data.x, data.y, `💔 1 NYAWA HILANG! (Sisa: ${data.livesRemaining}/3 Nyawa)`, "#f43f5e");
+      } else {
+        this.spawnFloatingText(data.x, data.y, `💥 -1 DARAH! (Sisa: ${data.hpRemaining}/5)`, "#ef4444");
+      }
 
       if (data.playerId === this.room.sessionId) {
-        this.cameras.main.shake(320, 0.035);
-        this.cameras.main.flash(250, 255, 0, 0);
-        this.updateHUDHealthBar(data.hpRemaining, 5);
+        this.cameras.main.shake(data.lifeLost ? 400 : 200, data.lifeLost ? 0.035 : 0.015);
+        this.cameras.main.flash(data.lifeLost ? 300 : 160, 255, 0, 0);
+        this.updateHUDHealthBar(data.hpRemaining, data.maxHp || 5, data.livesRemaining, data.maxLives || 3);
       }
     });
 
     this.room.onMessage("player_eliminated", (data: any) => {
       this.createBigExplosionEffect(data.x, data.y);
       sounds.playExplosion(true);
-      this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} HANCUR LEBUR!`, "#f43f5e");
+      this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} HANCUR TOTAL (3 NYAWA HABIS)!`, "#f43f5e");
 
       const elimP = this.players.get(data.playerId);
       if (elimP) {
@@ -926,9 +933,10 @@ export class GameScene extends Phaser.Scene {
       this.updateLeaderboard();
     });
 
-    // Khusus untuk pemain ini jika tereliminasi (3x terkena serangan)
+    // Khusus untuk pemain ini jika tereliminasi (seluruh 3 nyawa habis)
     this.room.onMessage("you_are_eliminated", (data: any) => {
       sounds.playExplosion(true);
+      sounds.playGameOver();
       this.cameras.main.shake(450, 0.05);
       this.cameras.main.flash(350, 255, 0, 0);
 
@@ -941,7 +949,7 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 5x!");
+      this.elimReasonText.setText(data.message || "Seluruh 3 Nyawa Pesawat Anda telah habis!");
       this.elimScoreText.setText(
         `Skor Pertandingan Ini: ${data.matchScore} Poin\n` +
         `Total Akumulasi Kantor: ${data.totalScore} Poin\n` +
@@ -1166,12 +1174,13 @@ export class GameScene extends Phaser.Scene {
   private updateLeaderboard() {
     if (!this.room || !this.room.state) return;
 
-    const playerList: { name: string; score: number; isMe: boolean; hp: number }[] = [];
+    const playerList: { name: string; score: number; isMe: boolean; hp: number; lives: number }[] = [];
     this.room.state.players.forEach((p: any, id: string) => {
       playerList.push({
         name: p.name,
         score: p.score,
         hp: p.hp,
+        lives: p.lives !== undefined ? p.lives : 3,
         isMe: id === this.room.sessionId,
       });
     });
@@ -1184,7 +1193,7 @@ export class GameScene extends Phaser.Scene {
         const item = playerList[i];
         const medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : `${i + 1}.`));
         const meTag = item.isMe ? " [YOU]" : "";
-        const heart = "❤️".repeat(Math.max(0, item.hp));
+        const heart = "❤️".repeat(Math.max(0, item.lives));
         entry.setText(`${medal} ${item.name.substring(0, 6)}${meTag} ${heart}: ${item.score}`);
         entry.setColor(item.isMe ? "#00f0ff" : (i === 0 ? "#ffd700" : "#cbd5e1"));
       } else {
@@ -1351,8 +1360,10 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Render Health Progress Bar di HUD utama
+   * - Progress bar menampilkan 5 bar darah untuk nyawa saat ini
+   * - Menampilkan sisa 3 Nyawa (Lives ❤️)
    */
-  private updateHUDHealthBar(hp: number, maxHp: number = 5) {
+  private updateHUDHealthBar(hp: number, maxHp: number = 5, lives: number = 3, maxLives: number = 3) {
     if (!this.myHpBarFill) return;
     this.myHpBarFill.clear();
 
@@ -1371,13 +1382,15 @@ export class GameScene extends Phaser.Scene {
       this.myHpBarFill.fillRoundedRect(167, 28 + 2, barWidth, 12, 3);
     }
 
+    const clampedLives = Math.max(0, Math.min(maxLives, lives));
+
     if (this.myHpText) {
-      this.myHpText.setText(clampedHp <= 1 ? "⚠️" : "🛡️");
+      this.myHpText.setText(clampedLives <= 1 ? "⚠️" : "🛡️");
     }
 
     if (this.myHpValText) {
-      this.myHpValText.setText(`${clampedHp}/${maxHp} (${Math.round(ratio * 100)}%)`);
-      this.myHpValText.setColor(clampedHp <= 1 ? "#fca5a5" : "#ffffff");
+      this.myHpValText.setText(`${clampedHp}/${maxHp} (${clampedLives}❤️)`);
+      this.myHpValText.setColor(clampedHp <= 1 || clampedLives <= 1 ? "#fca5a5" : "#ffffff");
     }
   }
 

@@ -18,7 +18,9 @@ export class Player extends Schema {
   @type("number") stepY: number = 2; // Posisi Netral: 2. Range 0 (Mundur 2 langkah: 900) s/d 4 (Maju 2 langkah: 740)
   @type("number") score: number = 0;
   @type("number") cumulativeScore: number = 0; // Akumulasi total skor dari database
-  @type("number") hp: number = 5; // Nyawa pemain (Maks 5x tembakan)
+  @type("number") lives: number = 3; // 3 Nyawa tetap
+  @type("number") maxLives: number = 3;
+  @type("number") hp: number = 5; // Bar darah per nyawa (5x tembakan untuk menghabiskan 1 nyawa)
   @type("number") maxHp: number = 5;
   @type("boolean") isEliminated: boolean = false;
   @type("number") invulnerableTimer: number = 0; // Kebal saat baru tertabrak/tertembak

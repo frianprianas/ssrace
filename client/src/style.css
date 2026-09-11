@@ -300,11 +300,11 @@ body {
   width: 108px;
   height: 108px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.28);
-  border: 1.8px solid rgba(0, 240, 255, 0.4);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15), inset 0 0 12px rgba(0, 240, 255, 0.08);
+  background: transparent !important;
+  border: 1.5px dashed rgba(0, 240, 255, 0.3);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   position: relative;
   display: flex;
   align-items: center;
@@ -315,14 +315,14 @@ body {
 
 .joystick-base:active {
   cursor: grabbing;
-  border-color: rgba(0, 240, 255, 0.7);
-  box-shadow: 0 0 22px rgba(0, 240, 255, 0.35);
+  border-color: rgba(0, 240, 255, 0.6);
+  background: rgba(0, 240, 255, 0.05) !important;
 }
 
 .j-arrow {
   position: absolute;
   font-size: 10px;
-  color: rgba(0, 240, 255, 0.45);
+  color: rgba(0, 240, 255, 0.35);
   font-weight: 900;
   pointer-events: none;
   user-select: none;
@@ -337,9 +337,9 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(0, 240, 255, 0.75), rgba(0, 119, 255, 0.35));
-  border: 1.8px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 14px rgba(0, 240, 255, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.4);
+  background: rgba(0, 240, 255, 0.08);
+  border: 1.5px solid rgba(0, 240, 255, 0.5);
+  box-shadow: none;
   position: absolute;
   pointer-events: none;
   transform: translate(0px, 0px);
@@ -360,11 +360,11 @@ body {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(239, 68, 68, 0.32), rgba(185, 28, 28, 0.18));
-  border: 2px solid rgba(248, 113, 113, 0.55);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.28), inset 0 0 10px rgba(239, 68, 68, 0.15);
+  background: transparent !important;
+  border: 1.5px dashed rgba(0, 240, 255, 0.35);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -372,22 +372,22 @@ body {
   gap: 2px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
   user-select: none;
   -webkit-user-select: none;
   color: #fff;
 }
 
 .touch-btn-fire-glass:active {
-  transform: scale(0.91);
-  background: radial-gradient(circle at 35% 35%, rgba(239, 68, 68, 0.75), rgba(220, 38, 38, 0.5));
-  border-color: #ff4444;
-  box-shadow: 0 0 28px rgba(239, 68, 68, 0.85), inset 0 0 14px rgba(255, 255, 255, 0.4);
+  transform: scale(0.92);
+  background: rgba(0, 240, 255, 0.12) !important;
+  border-color: rgba(0, 240, 255, 0.75);
 }
 
 .fire-glass-icon {
-  font-size: 1.4rem;
-  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+  font-size: 1.55rem;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.6));
 }
 
 .fire-glass-label {
@@ -395,8 +395,8 @@ body {
   font-size: 0.65rem;
   font-weight: 900;
   letter-spacing: 1px;
-  color: #fff;
-  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
 }
 
 .fire-label {
