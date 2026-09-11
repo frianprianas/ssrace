@@ -897,6 +897,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     bullet.y = player.y - 18;
     bullet.isEnemy = false;
     bullet.speedY = 680;
+    bullet.colorIndex = (player.characterId >= 0) ? player.characterId : (player.colorIndex % 5);
     this.state.bullets.push(bullet);
   }
 

@@ -1062,7 +1062,6 @@ export class GameScene extends Phaser.Scene {
     // 2. Sinkronisasi Peluru (Bullets: Laser Pemain & Peluru Musuh)
     this.room.state.bullets.onAdd((bullet: any) => {
       const gfx = this.add.graphics().setDepth(22);
-      const isLocal = bullet.playerId === this.room.sessionId;
       const isEnemy = bullet.isEnemy;
 
       if (isEnemy) {
@@ -1074,9 +1073,41 @@ export class GameScene extends Phaser.Scene {
         gfx.fillStyle(0xfef08a, 1);
         gfx.fillCircle(0, 0, 3);
       } else {
-        // Peluru Laser Pemain: Balok Laser Cyan / Hijau
-        gfx.fillStyle(isLocal ? 0x00f0ff : 0x10b981, 1);
-        gfx.fillRoundedRect(-2, -8, 4, 16, 2);
+        // Peluru Laser Pemain: Warna Disesuaikan Eksklusif dengan Karakter Masing-Masing!
+        // Char 0 (BAKTI): Merah Menyala (#ef4444)
+        // Char 1 (NUSA): Biru Cyan Plasma (#00f0ff)
+        // Char 2 (BAKNUS): Hijau Zamrud (#22c55e)
+        // Char 3 (TARA): Kuning Emas Photon (#facc15)
+        // Char 4 (BEEN): Ungu Void Distorsi (#d946ef)
+        let charIdx = bullet.colorIndex !== undefined ? bullet.colorIndex : 0;
+        if (bullet.playerId) {
+          const shooter = this.room.state.players.get(bullet.playerId);
+          if (shooter) {
+            charIdx = (shooter.characterId >= 0) ? shooter.characterId : (shooter.colorIndex % 5);
+          }
+        }
+
+        const LASER_PALETTES = [
+          { glow: 0xef4444, core: 0xffe4e6 }, // 0: BAKTI (Red)
+          { glow: 0x00f0ff, core: 0xf0fdf4 }, // 1: NUSA (Cyan/Blue)
+          { glow: 0x22c55e, core: 0xf0fdf4 }, // 2: BAKNUS (Green)
+          { glow: 0xfacc15, core: 0xfefce8 }, // 3: TARA (Gold/Yellow)
+          { glow: 0xd946ef, core: 0xfdf4ff }, // 4: BEEN (Purple/Void)
+        ];
+
+        const palette = LASER_PALETTES[charIdx % 5] || LASER_PALETTES[0];
+
+        // 1. Aura Pendaran Luar Laser (Glow)
+        gfx.fillStyle(palette.glow, 0.45);
+        gfx.fillRoundedRect(-4, -13, 8, 26, 4);
+
+        // 2. Balok Laser Utama Sesuai Karakter
+        gfx.fillStyle(palette.glow, 0.95);
+        gfx.fillRoundedRect(-2.5, -11, 5, 22, 2.5);
+
+        // 3. Inti Panas Putih (Bright Energy Core) di Tengah Laser
+        gfx.fillStyle(palette.core, 1);
+        gfx.fillRoundedRect(-1, -9, 2, 18, 1);
       }
 
       gfx.x = bullet.x;

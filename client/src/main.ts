@@ -215,6 +215,8 @@ window.addEventListener("DOMContentLoaded", () => {
     let aIdx = 0;
     let phase = 0; // 0 = narrative, 1 = alert
 
+    let pauseCounter = 0;
+
     typewriterTimer = setInterval(() => {
       if (!isTypewriterActive) {
         stopBriefingTypewriter();
@@ -222,29 +224,34 @@ window.addEventListener("DOMContentLoaded", () => {
       }
 
       if (phase === 0) {
-        nIdx += 2;
+        // Ketik Narrative 1 karakter per langkah secara berirama
+        nIdx += 1;
         const currentText = NARRATIVE_PLAIN.slice(0, nIdx);
         briefingNarrative.innerText = currentText;
         briefingNarrative.innerHTML += `<span class="typing-cursor">▌</span>`;
 
-        if (nIdx % 4 === 0 || nIdx % 4 === 1) {
-          sounds.playTypewriter();
-        }
+        // Bunyi ketikan mesin tik mikro
+        sounds.playTypewriter();
 
         if (nIdx >= NARRATIVE_PLAIN.length) {
           phase = 1;
+          pauseCounter = 8; // Jeda 8 tick (~300ms) sebelum mengetik protokol
           briefingNarrative.innerHTML = BRIEFING_FULL_NARRATIVE;
           briefingAlert.style.display = "block";
           briefingAlert.innerHTML = `<span class="typing-cursor">▌</span>`;
         }
       } else if (phase === 1) {
-        aIdx += 3;
+        if (pauseCounter > 0) {
+          pauseCounter--;
+          return;
+        }
+
+        // Ketik Alert Protocol 1 karakter per langkah
+        aIdx += 1;
         const currentAlert = ALERT_PLAIN.slice(0, aIdx).replace(/\n/g, "<br>");
         briefingAlert.innerHTML = currentAlert + `<span class="typing-cursor">▌</span>`;
 
-        if (aIdx % 6 === 0 || aIdx % 6 === 1) {
-          sounds.playTypewriter();
-        }
+        sounds.playTypewriter();
 
         if (aIdx >= ALERT_PLAIN.length) {
           stopBriefingTypewriter();
@@ -255,7 +262,7 @@ window.addEventListener("DOMContentLoaded", () => {
           }
         }
       }
-    }, 16);
+    }, 38); // Kecepatan ketik diperlambat ke 38ms (sangat pas, natural, dan dramatis)
   };
 
   if (btnSkipBriefing) {

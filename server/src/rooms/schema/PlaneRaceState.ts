@@ -8,6 +8,7 @@ export class Bullet extends Schema {
   @type("boolean") isEnemy: boolean = false;
   @type("number") speedX: number = 0;
   @type("number") speedY: number = 680;
+  @type("number") colorIndex: number = 0;
 }
 
 export class Player extends Schema {
