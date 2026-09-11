@@ -5,6 +5,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { PlaneRaceRoom } from "./rooms/PlaneRaceRoom";
+import { ScoreDatabase } from "./db/scoreDatabase";
 
 export default config({
   getId: () => "ssrace-game-server",
@@ -38,8 +39,20 @@ export default config({
         version: "1.0.0",
         endpoints: {
           ws: "ws://localhost:2567",
-          monitor: "http://localhost:2567/colyseus"
+          monitor: "http://localhost:2567/colyseus",
+          leaderboard: "http://localhost:2567/api/leaderboard"
         }
+      });
+    });
+
+    // API Leaderboard Akumulasi Skor Seluruh Karyawan
+    app.get("/api/leaderboard", (req, res) => {
+      const topLimit = parseInt(req.query.limit as string) || 20;
+      const scores = ScoreDatabase.getInstance().getTopLeaderboard(topLimit);
+      res.json({
+        success: true,
+        count: scores.length,
+        leaderboard: scores
       });
     });
 

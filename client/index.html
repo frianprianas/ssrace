@@ -20,9 +20,10 @@
 
       <!-- User Session Info / Quick Bar -->
       <div id="user-session-bar" class="connection-bar">
+        <button id="btn-open-leaderboard" class="btn-secondary btn-leaderboard" title="Lihat Klasemen Akumulasi Kantor">🏆 KLASEMEN</button>
         <div id="session-info" class="session-info" style="display: none;">
-          <span class="user-badge" id="badge-username">👤 Karyawan Baknus</span>
-          <span class="user-email" id="badge-email">user@smk.baktinusantara666.sch.id</span>
+          <span class="user-badge" id="badge-username">👤 Karyawan</span>
+          <span class="user-score-badge" id="badge-total-score">⭐ Total: 0 Poin</span>
           <button id="btn-logout" class="btn-secondary">Ganti Akun</button>
         </div>
         <button id="btn-open-login" class="btn-primary">🔐 LOGIN BAKNUS MAIL</button>
@@ -128,6 +129,36 @@
           🚀 MASUK ARENA BALAP
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Klasemen Akumulasi Skor Kantor -->
+  <div id="leaderboard-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-leaderboard">
+      <div class="modal-header">
+        <span class="badge-satire">DATABASE KANTOR • ALL-TIME RANKING</span>
+        <h2>🏆 Klasemen Karyawan Terhebat</h2>
+        <p>Total skor terakumulasi dari seluruh match yang pernah dimainkan.</p>
+      </div>
+
+      <div class="leaderboard-table-container">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Karyawan</th>
+              <th>Total Skor</th>
+              <th>Match Terbaik</th>
+              <th>Main</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-table-body">
+            <tr><td colspan="5" style="text-align: center;">Memuat data klasemen...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button id="btn-close-leaderboard" class="btn-primary btn-block">TUTUP</button>
     </div>
   </div>
 

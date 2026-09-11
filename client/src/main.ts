@@ -39,11 +39,74 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const sessionInfo = document.getElementById("session-info") as HTMLDivElement;
   const badgeUsername = document.getElementById("badge-username") as HTMLSpanElement;
-  const badgeEmail = document.getElementById("badge-email") as HTMLSpanElement;
+  const badgeTotalScore = document.getElementById("badge-total-score") as HTMLSpanElement;
   const btnLogout = document.getElementById("btn-logout") as HTMLButtonElement;
   const btnOpenLogin = document.getElementById("btn-open-login") as HTMLButtonElement;
+  const btnOpenLeaderboard = document.getElementById("btn-open-leaderboard") as HTMLButtonElement;
+  const btnCloseLeaderboard = document.getElementById("btn-close-leaderboard") as HTMLButtonElement;
+  const modalLeaderboard = document.getElementById("leaderboard-modal") as HTMLDivElement;
+  const leaderboardTableBody = document.getElementById("leaderboard-table-body") as HTMLTableSectionElement;
   const btnBgm = document.getElementById("btn-bgm") as HTMLButtonElement;
   const btnSfx = document.getElementById("btn-sfx") as HTMLButtonElement;
+
+  const updateSessionUI = (username: string, totalScore?: number) => {
+    if (sessionInfo && badgeUsername) {
+      badgeUsername.innerText = `👤 ${username}`;
+      if (badgeTotalScore && totalScore !== undefined) {
+        badgeTotalScore.innerText = `⭐ Total: ${totalScore.toLocaleString()} Poin`;
+      }
+      sessionInfo.style.display = "flex";
+      if (btnOpenLogin) btnOpenLogin.style.display = "none";
+    }
+  };
+
+  const fetchAndShowLeaderboard = async () => {
+    if (modalLeaderboard) modalLeaderboard.style.display = "flex";
+    if (leaderboardTableBody) {
+      leaderboardTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 14px;">⏳ Memuat klasemen karyawan dari database...</td></tr>`;
+    }
+
+    try {
+      const res = await fetch("/api/leaderboard");
+      const data = await res.json();
+      if (data && data.leaderboard && data.leaderboard.length > 0) {
+        leaderboardTableBody.innerHTML = data.leaderboard.map((item: any, idx: number) => {
+          let rankClass = "";
+          let medal = `${idx + 1}`;
+          if (idx === 0) { rankClass = "rank-gold"; medal = "🥇 1"; }
+          else if (idx === 1) { rankClass = "rank-silver"; medal = "🥈 2"; }
+          else if (idx === 2) { rankClass = "rank-bronze"; medal = "🥉 3"; }
+
+          return `
+            <tr class="${rankClass}">
+              <td>${medal}</td>
+              <td><strong>${item.username}</strong></td>
+              <td style="color: #ffd700; font-weight: bold;">⭐ ${item.totalScore.toLocaleString()}</td>
+              <td style="color: #38bdf8;">${item.highestScore.toLocaleString()}</td>
+              <td style="color: #94a3b8;">${item.gamesPlayed}x</td>
+            </tr>
+          `;
+        }).join("");
+      } else {
+        leaderboardTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 14px;">Belum ada rekor permainan tersimpan. Jadilah yang pertama!</td></tr>`;
+      }
+    } catch (err) {
+      console.error("Gagal memuat leaderboard:", err);
+      if (leaderboardTableBody) {
+        leaderboardTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 14px;">Gagal mengambil data klasemen dari server.</td></tr>`;
+      }
+    }
+  };
+
+  if (btnOpenLeaderboard) {
+    btnOpenLeaderboard.addEventListener("click", fetchAndShowLeaderboard);
+  }
+
+  if (btnCloseLeaderboard) {
+    btnCloseLeaderboard.addEventListener("click", () => {
+      if (modalLeaderboard) modalLeaderboard.style.display = "none";
+    });
+  }
 
   // Inisialisasi Server URL dari host browser otomatis
   if (inputServer) {
@@ -82,14 +145,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const updateSessionUI = (email: string, name?: string) => {
-    if (sessionInfo && badgeUsername && badgeEmail) {
-      badgeUsername.innerText = `👤 ${name || email.split("@")[0]}`;
-      badgeEmail.innerText = email;
-      sessionInfo.style.display = "flex";
-      if (btnOpenLogin) btnOpenLogin.style.display = "none";
-    }
-  };
 
   // Handler Submit Login Form
   if (formLogin) {
@@ -117,7 +172,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         localStorage.setItem("baknus_username", username);
         showModal(false);
-        updateSessionUI(fullEmail, username);
+        updateSessionUI(username);
       } catch (err: any) {
         console.error("Login gagal:", err);
         loginError.innerText = err.message || "Gagal masuk. Periksa username dan password Baknus Mail.";
@@ -137,9 +192,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (scene) {
         try {
           await scene.connectToServer({ serverUrl, token: ssoToken });
-          const fullEmail = savedUsername ? `${savedUsername}@smk.baktinusantara666.sch.id` : "Karyawan Baknus";
           showModal(false);
-          updateSessionUI(fullEmail, savedUsername || "Karyawan");
+          updateSessionUI(savedUsername || "Karyawan");
         } catch (e) {
           console.warn("SSO Token kedaluwarsa, tampilkan modal login.", e);
           localStorage.removeItem("baknus_token");

@@ -5,6 +5,8 @@ export class Bullet extends Schema {
   @type("string") playerId: string = "";
   @type("number") x: number = 0;
   @type("number") y: number = 0;
+  @type("boolean") isEnemy: boolean = false;
+  @type("number") speedY: number = 680;
 }
 
 export class Player extends Schema {
@@ -15,7 +17,11 @@ export class Player extends Schema {
   @type("number") y: number = 510; // Zona pertahanan bawah
   @type("number") stepY: number = 1; // 3 Langkah: 0 (bawah: 535), 1 (tengah: 495), 2 (atas: 455)
   @type("number") score: number = 0;
-  @type("number") invulnerableTimer: number = 0; // Kebal saat baru tertabrak
+  @type("number") cumulativeScore: number = 0; // Akumulasi total skor dari database
+  @type("number") hp: number = 3; // Nyawa pemain (Maks 3x tembakan)
+  @type("number") maxHp: number = 3;
+  @type("boolean") isEliminated: boolean = false;
+  @type("number") invulnerableTimer: number = 0; // Kebal saat baru tertabrak/tertembak
   @type("number") colorIndex: number = 0;
 }
 
@@ -35,9 +41,11 @@ export class Enemy extends Schema {
   @type("number") x: number = 0;
   @type("number") y: number = -60;
   @type("number") speedX: number = 0;
-  @type("number") speedY: number = 110;
+  @type("number") speedY: number = 100;
   @type("number") hp: number = 1;
   @type("number") radius: number = 22;
+  @type("number") shootTimer: number = 0; // Timer tembakan peluru musuh
+  @type("number") enemyType: number = 0;
 }
 
 export class PlaneRaceState extends Schema {

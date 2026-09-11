@@ -8,6 +8,9 @@ interface PlayerData {
   exhaust: Phaser.GameObjects.Sprite;
   nameText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
+  hpText: Phaser.GameObjects.Text;
+  beaconRing?: Phaser.GameObjects.Graphics;
+  markerTag?: Phaser.GameObjects.Text;
   targetX: number;
   targetY: number;
   isLocal: boolean;
@@ -17,6 +20,7 @@ interface BulletData {
   sprite: Phaser.GameObjects.Graphics;
   targetX: number;
   targetY: number;
+  isEnemy: boolean;
 }
 
 interface CoinData {
@@ -30,6 +34,7 @@ interface CoinData {
 interface EnemyData {
   container: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Sprite;
+  exhaust: Phaser.GameObjects.Sprite;
   labelText: Phaser.GameObjects.Text;
   targetX: number;
   targetY: number;
@@ -39,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private client!: Colyseus.Client;
   private room!: Colyseus.Room;
   private serverUrl: string = "ws://localhost:2567";
+  public lastAuthOptions: any = null;
 
   // Entity tracking
   private players: Map<string, PlayerData> = new Map();
@@ -70,14 +76,19 @@ export class GameScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private statusBadge!: Phaser.GameObjects.Text;
   private myScoreText!: Phaser.GameObjects.Text;
+  private myHpText!: Phaser.GameObjects.Text;
+  private myCumulativeText!: Phaser.GameObjects.Text;
   private leaderboardContainer!: Phaser.GameObjects.Container;
   private leaderboardEntries: Phaser.GameObjects.Text[] = [];
 
-  // Finished Modal
+  // Match Finished Modal
   private modalContainer!: Phaser.GameObjects.Container;
-  private modalTitle!: Phaser.GameObjects.Text;
   private modalWinner!: Phaser.GameObjects.Text;
-  private modalSub!: Phaser.GameObjects.Text;
+
+  // Elimination / Game Over Modal
+  private eliminatedModal!: Phaser.GameObjects.Container;
+  private elimReasonText!: Phaser.GameObjects.Text;
+  private elimScoreText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "GameScene" });
@@ -95,7 +106,7 @@ export class GameScene extends Phaser.Scene {
     // 1. Starfield Space Background
     this.initStarfield();
 
-    // 2. Setup Keyboard & Mouse Input
+    // 2. Setup Keyboard Input
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
       this.wasd = {
@@ -109,7 +120,6 @@ export class GameScene extends Phaser.Scene {
 
     // 3. Setup Touch Drag & Tap Langsung di Layar (Smartphone Touchscreen Support)
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      // Tap di separuh kanan layar untuk menembak
       if (pointer.x > 400) {
         this.touchInput.shoot = true;
       }
@@ -121,7 +131,6 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (pointer.isDown && pointer.x <= 500) {
-        // Drag horizontal mengarahkan pesawat lokal
         const myPlayer = this.players.get(this.room?.sessionId || "");
         if (myPlayer) {
           const diff = pointer.x - myPlayer.container.x;
@@ -134,7 +143,11 @@ export class GameScene extends Phaser.Scene {
     // 4. Setup UI HUD
     this.createHUD();
 
-    // 5. Status Awal Menunggu Login
+    // 5. Setup Modals
+    this.createFinishedModal();
+    this.createEliminatedModal();
+
+    // 6. Status Awal Menunggu Login
     this.statusBadge.setText("MENUNGGU LOGIN BAKNUS MAIL");
     this.statusBadge.setColor("#f59e0b");
   }
@@ -160,53 +173,46 @@ export class GameScene extends Phaser.Scene {
     defLine.lineBetween(0, 560, 800, 560);
   }
 
+  /**
+   * Pembuatan tekstur grafis prosedural berkualitas tinggi (Zero byte eksternal)
+   */
   private createProceduralTextures() {
-    // 1. Pesawat Pemain Lokal (CYAN ULTRA FIGHTER)
+    // 1. Pesawat Pemain Lokal (Cyber Cyan Interceptor)
     const gPlayer = this.make.graphics({ x: 0, y: 0 });
-    // Halo energi
-    gPlayer.lineStyle(2, 0x00f0ff, 0.4);
-    gPlayer.strokeCircle(16, 16, 15);
-    // Sayap jet tajam
-    gPlayer.fillStyle(0x0284c7, 1);
-    gPlayer.fillTriangle(16, 0, 0, 30, 8, 22);
-    gPlayer.fillTriangle(16, 0, 24, 22, 32, 30);
-    // Bodi utama putih berkilau
-    gPlayer.fillStyle(0xffffff, 1);
-    gPlayer.fillTriangle(16, 2, 9, 26, 23, 26);
-    // Garis aksen cyan
     gPlayer.fillStyle(0x00f0ff, 1);
-    gPlayer.fillRect(14, 10, 4, 12);
-    // Kokpit neon
+    gPlayer.fillTriangle(16, 0, 0, 30, 7, 22);
+    gPlayer.fillTriangle(16, 0, 25, 22, 32, 30);
+    gPlayer.fillStyle(0xffffff, 1);
+    gPlayer.fillTriangle(16, 2, 9, 25, 23, 25);
+    gPlayer.fillStyle(0x0077ff, 1);
+    gPlayer.fillRect(13, 8, 6, 12);
     gPlayer.fillStyle(0x38bdf8, 1);
     gPlayer.fillCircle(16, 12, 3.5);
     gPlayer.generateTexture("space_jet_local", 32, 32);
 
     // 2. Pesawat Pemain Lain (5 Palet Warna Kontras)
     const palettes = [
-      { wing: 0xd97706, body: 0xffedd5, accent: 0xf59e0b }, // 0: Solar Orange / Amber
-      { wing: 0x059669, body: 0xd1fae5, accent: 0x10b981 }, // 1: Cyber Emerald / Mint
-      { wing: 0x7c3aed, body: 0xede9fe, accent: 0xa855f7 }, // 2: Royal Amethyst / Purple
-      { wing: 0xe11d48, body: 0xffe4e6, accent: 0xf43f5e }, // 3: Crimson Red / Rose
-      { wing: 0x0891b2, body: 0xcffafe, accent: 0x06b6d4 }  // 4: Electric Blue / Teal
+      { wing: 0xd97706, body: 0xffedd5, accent: 0xf59e0b }, // Solar Amber
+      { wing: 0x059669, body: 0xd1fae5, accent: 0x10b981 }, // Cyber Emerald
+      { wing: 0x7c3aed, body: 0xede9fe, accent: 0xa855f7 }, // Royal Amethyst
+      { wing: 0xe11d48, body: 0xffe4e6, accent: 0xf43f5e }, // Crimson Rose
+      { wing: 0x0891b2, body: 0xcffafe, accent: 0x06b6d4 }  // Electric Blue
     ];
 
     palettes.forEach((pal, idx) => {
       const g = this.make.graphics({ x: 0, y: 0 });
-      // Sayap
       g.fillStyle(pal.wing, 1);
       g.fillTriangle(16, 0, 0, 30, 8, 22);
       g.fillTriangle(16, 0, 24, 22, 32, 30);
-      // Bodi
       g.fillStyle(pal.body, 1);
       g.fillTriangle(16, 2, 9, 26, 23, 26);
-      // Aksen
       g.fillStyle(pal.accent, 1);
       g.fillRect(14, 10, 4, 12);
       g.fillCircle(16, 12, 3.5);
       g.generateTexture(`space_jet_remote_${idx}`, 32, 32);
     });
 
-    // 3. Exhaust Api Mesin Ganda
+    // 3. Exhaust Api Mesin Pemain (Menghadap Bawah)
     const gExhaust = this.make.graphics({ x: 0, y: 0 });
     gExhaust.fillStyle(0x00f0ff, 0.9);
     gExhaust.fillTriangle(2, 0, 0, 10, 4, 10);
@@ -216,7 +222,54 @@ export class GameScene extends Phaser.Scene {
     gExhaust.fillTriangle(8, 0, 7, 6, 9, 6);
     gExhaust.generateTexture("exhaust_flame", 12, 10);
 
-    // 4. Koin 25 - Uang Lembur (Oranye / Tembaga Berkilau)
+    // 4. Exhaust Api Mesin Pesawat Musuh (Menghadap Atas)
+    const gEnemyExhaust = this.make.graphics({ x: 0, y: 0 });
+    gEnemyExhaust.fillStyle(0xef4444, 0.9);
+    gEnemyExhaust.fillTriangle(2, 10, 0, 0, 4, 0);
+    gEnemyExhaust.fillTriangle(8, 10, 6, 0, 10, 0);
+    gEnemyExhaust.fillStyle(0xffedd5, 1);
+    gEnemyExhaust.fillTriangle(2, 10, 1, 4, 3, 4);
+    gEnemyExhaust.fillTriangle(8, 10, 7, 4, 9, 4);
+    gEnemyExhaust.generateTexture("enemy_exhaust_flame", 12, 10);
+
+    // 5. Pesawat Tempur Musuh (5 Varian Pesawat Menghadap ke Bawah)
+    const enemyColors = [
+      { wing: 0x991b1b, body: 0x450a0a, cockpit: 0xff0055, trim: 0xf87171 }, // 0: Crimson Destroyer
+      { wing: 0x581c87, body: 0x3b0764, cockpit: 0xd946ef, trim: 0xc084fc }, // 1: Void Reaper
+      { wing: 0x831843, body: 0x500724, cockpit: 0xf43f5e, trim: 0xfb7185 }, // 2: Shadow Raider
+      { wing: 0x78350f, body: 0x451a03, cockpit: 0xf59e0b, trim: 0xfbbf24 }, // 3: Dread Battleship
+      { wing: 0x1e293b, body: 0x0f172a, cockpit: 0xef4444, trim: 0x94a3b8 }  // 4: Stealth Interceptor
+    ];
+
+    enemyColors.forEach((ec, idx) => {
+      const gE = this.make.graphics({ x: 0, y: 0 });
+      // Sayap Menghadap ke Bawah
+      gE.fillStyle(ec.wing, 1);
+      gE.fillTriangle(20, 38, 0, 6, 8, 16);
+      gE.fillTriangle(20, 38, 32, 16, 40, 6);
+
+      // Bodi Pesawat
+      gE.fillStyle(ec.body, 1);
+      gE.fillTriangle(20, 36, 9, 8, 31, 8);
+
+      // Garis Aksen & Armor
+      gE.lineStyle(1.5, ec.trim, 0.9);
+      gE.lineBetween(20, 10, 20, 34);
+      gE.lineBetween(8, 16, 20, 26);
+      gE.lineBetween(32, 16, 20, 26);
+
+      // Kokpit Merah Menyala
+      gE.fillStyle(ec.cockpit, 1);
+      gE.fillCircle(20, 20, 4);
+
+      // Moncong Meriam Tembak
+      gE.fillStyle(0xffffff, 1);
+      gE.fillRect(18, 34, 4, 6);
+
+      gE.generateTexture(`enemy_spaceship_${idx}`, 40, 40);
+    });
+
+    // 6. Koin 25 - Uang Lembur (Oranye / Tembaga Berkilau)
     const gCoin25 = this.make.graphics({ x: 0, y: 0 });
     gCoin25.fillStyle(0xf59e0b, 1);
     gCoin25.fillCircle(14, 14, 13);
@@ -226,7 +279,7 @@ export class GameScene extends Phaser.Scene {
     gCoin25.strokeCircle(14, 14, 8);
     gCoin25.generateTexture("coin_25", 28, 28);
 
-    // 5. Koin 50 - Tunjangan (Cyan / Perak)
+    // 7. Koin 50 - Tunjangan (Cyan / Perak)
     const gCoin50 = this.make.graphics({ x: 0, y: 0 });
     gCoin50.fillStyle(0x06b6d4, 1);
     gCoin50.fillCircle(16, 16, 15);
@@ -236,7 +289,7 @@ export class GameScene extends Phaser.Scene {
     gCoin50.strokeCircle(16, 16, 9);
     gCoin50.generateTexture("coin_50", 32, 32);
 
-    // 6. Koin 100 - Bonus KPI (Bintang Emas Bersinar)
+    // 8. Koin 100 - Bonus KPI (Bintang Emas Bersinar)
     const gCoin100 = this.make.graphics({ x: 0, y: 0 });
     gCoin100.fillStyle(0xeab308, 1);
     gCoin100.fillCircle(18, 18, 17);
@@ -245,17 +298,6 @@ export class GameScene extends Phaser.Scene {
     gCoin100.fillStyle(0xfef08a, 0.85);
     gCoin100.fillCircle(18, 18, 7);
     gCoin100.generateTexture("coin_100", 36, 36);
-
-    // 7. Musuh Korporat (Hazard Drone Berduri)
-    const gEnemy = this.make.graphics({ x: 0, y: 0 });
-    gEnemy.fillStyle(0xef4444, 1);
-    gEnemy.fillCircle(24, 24, 21);
-    gEnemy.lineStyle(3, 0xffffff, 0.95);
-    gEnemy.strokeCircle(24, 24, 21);
-    gEnemy.lineStyle(3.5, 0x7f1d1d, 1);
-    gEnemy.lineBetween(14, 14, 34, 34);
-    gEnemy.lineBetween(34, 14, 14, 34);
-    gEnemy.generateTexture("enemy_alien", 48, 48);
   }
 
   private createHUD() {
@@ -263,37 +305,53 @@ export class GameScene extends Phaser.Scene {
 
     // Header Background Bar
     const hudBar = this.add.graphics().setDepth(100);
-    hudBar.fillStyle(0x0f172a, 0.85);
-    hudBar.fillRoundedRect(20, 14, 760, 44, 8);
-    hudBar.lineStyle(1, 0x334155, 0.8);
-    hudBar.strokeRoundedRect(20, 14, 760, 44, 8);
+    hudBar.fillStyle(0x0f172a, 0.88);
+    hudBar.fillRoundedRect(16, 12, 768, 48, 8);
+    hudBar.lineStyle(1, 0x00f0ff, 0.3);
+    hudBar.strokeRoundedRect(16, 12, 768, 48, 8);
 
     // Status Room
-    this.statusBadge = this.add.text(35, hudY + 12, "MENUNGGU REKAN KERJA...", {
+    this.statusBadge = this.add.text(28, hudY + 12, "MENUNGGU REKAN KERJA...", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "14px",
+      fontSize: "13px",
       fontStyle: "bold",
       color: "#38bdf8",
     }).setOrigin(0, 0.5).setDepth(101);
 
+    // Nyawa Pemain Lokal (❤️❤️❤️)
+    this.myHpText = this.add.text(285, hudY + 12, "NYAWA: ❤️❤️❤️", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: "#f43f5e",
+    }).setOrigin(0.5, 0.5).setDepth(101);
+
     // Countdown Timer
-    this.timerText = this.add.text(400, hudY + 12, "WAKTU: 120s", {
+    this.timerText = this.add.text(435, hudY + 12, "WAKTU: 120s", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "18px",
+      fontSize: "17px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5, 0.5).setDepth(101);
 
-    // Skor Pemain Lokal
-    this.myScoreText = this.add.text(765, hudY + 12, "SKOR: 0", {
+    // Skor Match Ini
+    this.myScoreText = this.add.text(595, hudY + 12, "MATCH: 0", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "16px",
+      fontSize: "14px",
       fontStyle: "bold",
       color: "#00f0ff",
+    }).setOrigin(0.5, 0.5).setDepth(101);
+
+    // Total Akumulasi Skor Kantor
+    this.myCumulativeText = this.add.text(765, hudY + 12, "TOTAL: 0", {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: "#a855f7",
     }).setOrigin(1, 0.5).setDepth(101);
 
-    // Leaderboard Box (Top 5) di kanan atas
-    this.leaderboardContainer = this.add.container(620, 68).setDepth(100);
+    // Leaderboard Match Box (Top 5) di kanan atas
+    this.leaderboardContainer = this.add.container(620, 70).setDepth(100);
     const lbBg = this.add.graphics();
     lbBg.fillStyle(0x0f172a, 0.88);
     lbBg.fillRoundedRect(0, 0, 160, 140, 8);
@@ -301,59 +359,122 @@ export class GameScene extends Phaser.Scene {
     lbBg.strokeRoundedRect(0, 0, 160, 140, 8);
     this.leaderboardContainer.add(lbBg);
 
-    const lbTitle = this.add.text(80, 12, "TOP 5 KARYAWAN", {
+    const lbTitle = this.add.text(80, 12, "🏆 LIVE MATCH", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "11px",
       fontStyle: "bold",
-      color: "#94a3b8",
-    }).setOrigin(0.5, 0);
+      color: "#00f0ff",
+    }).setOrigin(0.5);
     this.leaderboardContainer.add(lbTitle);
 
+    this.leaderboardEntries = [];
     for (let i = 0; i < 5; i++) {
-      const entryText = this.add.text(12, 34 + i * 20, `${i + 1}. -`, {
+      const entry = this.add.text(12, 34 + i * 19, `${i + 1}. -`, {
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: "11px",
-        color: i === 0 ? "#ffd700" : "#cbd5e1",
+        fontSize: "10px",
+        color: "#94a3b8",
       });
-      this.leaderboardContainer.add(entryText);
-      this.leaderboardEntries.push(entryText);
+      this.leaderboardContainer.add(entry);
+      this.leaderboardEntries.push(entry);
     }
+  }
 
-    // Modal Game Over (Finished)
-    this.modalContainer = this.add.container(400, 300).setDepth(200).setVisible(false);
-    const mBg = this.add.graphics();
-    mBg.fillStyle(0x030712, 0.95);
-    mBg.fillRoundedRect(-220, -140, 440, 280, 16);
-    mBg.lineStyle(2, 0x00f0ff, 0.8);
-    mBg.strokeRoundedRect(-220, -140, 440, 280, 16);
-    this.modalContainer.add(mBg);
+  private createFinishedModal() {
+    this.modalContainer = this.add.container(400, 300).setDepth(500).setVisible(false);
 
-    this.modalTitle = this.add.text(0, -90, "🏆 RACE SURVIVAL SELESAI!", {
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x050b14, 0.9);
+    backdrop.fillRoundedRect(-220, -140, 440, 280, 16);
+    backdrop.lineStyle(2, 0xffd700, 0.85);
+    backdrop.strokeRoundedRect(-220, -140, 440, 280, 16);
+    this.modalContainer.add(backdrop);
+
+    const title = this.add.text(0, -95, "🏁 RACE SURVIVAL SELESAI! 🏁", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "24px",
+      fontSize: "22px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5);
-    this.modalContainer.add(this.modalTitle);
+    this.modalContainer.add(title);
 
-    this.modalWinner = this.add.text(0, -20, "Karyawan Teladan:\n-", {
+    this.modalWinner = this.add.text(0, -15, "Menghitung skor...", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "18px",
+      fontSize: "16px",
+      fontStyle: "bold",
+      color: "#fff",
       align: "center",
-      color: "#ffffff",
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalWinner);
 
-    this.modalSub = this.add.text(0, 60, "Mempersiapkan ronde berikutnya dalam 10 detik...", {
+    const sub = this.add.text(0, 75, "Poin Anda telah diakumulasikan ke Database Kantor!\nRonde berikutnya dimulai otomatis...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "12px",
       color: "#94a3b8",
       align: "center",
     }).setOrigin(0.5);
-    this.modalContainer.add(this.modalSub);
+    this.modalContainer.add(sub);
+  }
+
+  private createEliminatedModal() {
+    this.eliminatedModal = this.add.container(400, 300).setDepth(600).setVisible(false);
+
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x0a0508, 0.94);
+    backdrop.fillRoundedRect(-230, -160, 460, 320, 16);
+    backdrop.lineStyle(2.5, 0xef4444, 0.9);
+    backdrop.strokeRoundedRect(-230, -160, 460, 320, 16);
+    this.eliminatedModal.add(backdrop);
+
+    const title = this.add.text(0, -110, "💥 TERELIMINASI! (GAME OVER) 💥", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "22px",
+      fontStyle: "bold",
+      color: "#ef4444",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(title);
+
+    this.elimReasonText = this.add.text(0, -55, "Pesawat Anda terkena tembakan musuh 3x!", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "14px",
+      color: "#fca5a5",
+      align: "center",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(this.elimReasonText);
+
+    this.elimScoreText = this.add.text(0, 10, "Skor Match: 0 Poin\nTotal Akumulasi Kantor: 0 Poin", {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "15px",
+      fontStyle: "bold",
+      color: "#ffd700",
+      align: "center",
+      lineSpacing: 8,
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(this.elimScoreText);
+
+    // Tombol Masuk Arena Balap Lagi
+    const btnRejoin = this.add.graphics();
+    btnRejoin.fillStyle(0x00f0ff, 1);
+    btnRejoin.fillRoundedRect(-150, 85, 300, 44, 8);
+    this.eliminatedModal.add(btnRejoin);
+
+    const btnText = this.add.text(0, 107, "🚀 MASUK ARENA BALAP LAGI", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "15px",
+      fontStyle: "bold",
+      color: "#050b14",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(btnText);
+
+    const hitZone = this.add.zone(0, 107, 300, 44).setInteractive({ cursor: "pointer" });
+    hitZone.on("pointerdown", () => {
+      this.eliminatedModal.setVisible(false);
+      this.reconnect();
+    });
+    this.eliminatedModal.add(hitZone);
   }
 
   async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string }) {
+    this.lastAuthOptions = authOptions;
     if (authOptions.serverUrl) this.serverUrl = authOptions.serverUrl;
 
     try {
@@ -382,6 +503,22 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private async reconnect() {
+    if (this.lastAuthOptions) {
+      try {
+        await this.connectToServer(this.lastAuthOptions);
+      } catch (e) {
+        console.warn("Gagal auto-rejoin:", e);
+        // Tampilkan modal login web biasa
+        const loginModal = document.getElementById("login-modal");
+        if (loginModal) loginModal.style.display = "flex";
+      }
+    } else {
+      const loginModal = document.getElementById("login-modal");
+      if (loginModal) loginModal.style.display = "flex";
+    }
+  }
+
   private setupRoomListeners() {
     // 1. Sinkronisasi Pemain (Players)
     this.room.state.players.onAdd((player: any, sessionId: string) => {
@@ -390,14 +527,34 @@ export class GameScene extends Phaser.Scene {
 
       const container = this.add.container(player.x, player.y).setDepth(30);
 
-      // Api knalpot mesin di bagian bawah
-      const exhaust = this.add.sprite(0, 16, "exhaust_flame");
+      // A. PENANDA KHUSUS PESAWAT SENDIRI (Halo Neon Cyan Berdenyut)
+      let beaconRing: Phaser.GameObjects.Graphics | undefined;
+      let markerTag: Phaser.GameObjects.Text | undefined;
 
-      // Sprite Pesawat
+      if (isLocal) {
+        beaconRing = this.add.graphics();
+        beaconRing.lineStyle(2.5, 0x00f0ff, 0.85);
+        beaconRing.strokeCircle(0, 0, 26);
+        beaconRing.fillStyle(0x00f0ff, 0.15);
+        beaconRing.fillCircle(0, 0, 26);
+        container.add(beaconRing);
+
+        // Label Tag Panah "▼ ANDA" di atas kepala pesawat
+        markerTag = this.add.text(0, -38, "▼ ANDA", {
+          fontFamily: "'Outfit', sans-serif",
+          fontSize: "11px",
+          fontStyle: "bold",
+          color: "#00f0ff",
+        }).setOrigin(0.5);
+        container.add(markerTag);
+      }
+
+      // Api knalpot mesin
+      const exhaust = this.add.sprite(0, 16, "exhaust_flame");
       const sprite = this.add.sprite(0, 0, textureKey);
 
       // Label Nama
-      const displayName = isLocal ? `★ ${player.name} (YOU)` : player.name;
+      const displayName = isLocal ? `★ ${player.name}` : player.name;
       const nameText = this.add.text(0, -22, displayName, {
         fontFamily: "'Outfit', sans-serif",
         fontSize: "11px",
@@ -405,14 +562,20 @@ export class GameScene extends Phaser.Scene {
         color: isLocal ? "#00f0ff" : "#f1f5f9",
       }).setOrigin(0.5);
 
+      // Ikon Nyawa (❤️❤️❤️) di atas pesawat
+      const hpHearts = "❤️".repeat(Math.max(0, player.hp || 3)) + "🖤".repeat(Math.max(0, 3 - (player.hp || 3)));
+      const hpText = this.add.text(0, -11, hpHearts, {
+        fontSize: "9px"
+      }).setOrigin(0.5);
+
       // Skor kecil
-      const scoreText = this.add.text(0, -11, "0", {
+      const scoreText = this.add.text(0, 24, "0", {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "10px",
         color: "#ffd700",
       }).setOrigin(0.5);
 
-      container.add([exhaust, sprite, nameText, scoreText]);
+      container.add([exhaust, sprite, nameText, hpText, scoreText]);
 
       const playerData: PlayerData = {
         container,
@@ -420,6 +583,9 @@ export class GameScene extends Phaser.Scene {
         exhaust,
         nameText,
         scoreText,
+        hpText,
+        beaconRing,
+        markerTag,
         targetX: player.x,
         targetY: player.y,
         isLocal,
@@ -427,13 +593,25 @@ export class GameScene extends Phaser.Scene {
 
       this.players.set(sessionId, playerData);
 
+      // Update HUD awal
+      if (isLocal) {
+        this.myScoreText.setText(`MATCH: ${player.score}`);
+        this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
+        this.myHpText.setText(`NYAWA: ${hpHearts}`);
+      }
+
       player.onChange(() => {
         playerData.targetX = player.x;
         playerData.targetY = player.y;
         playerData.scoreText.setText(`${player.score}`);
 
+        const currentHearts = "❤️".repeat(Math.max(0, player.hp)) + "🖤".repeat(Math.max(0, 3 - player.hp));
+        playerData.hpText.setText(currentHearts);
+
         if (isLocal) {
-          this.myScoreText.setText(`SKOR: ${player.score}`);
+          this.myScoreText.setText(`MATCH: ${player.score}`);
+          this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
+          this.myHpText.setText(`NYAWA: ${currentHearts}`);
         }
 
         if (player.invulnerableTimer > 0) {
@@ -452,12 +630,24 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 2. Sinkronisasi Peluru (Bullets)
+    // 2. Sinkronisasi Peluru (Bullets: Laser Pemain & Peluru Musuh)
     this.room.state.bullets.onAdd((bullet: any) => {
-      const gfx = this.add.graphics().setDepth(20);
+      const gfx = this.add.graphics().setDepth(22);
       const isLocal = bullet.playerId === this.room.sessionId;
-      gfx.fillStyle(isLocal ? 0x00f0ff : 0xff3366, 1);
-      gfx.fillRoundedRect(-2, -7, 4, 14, 2);
+      const isEnemy = bullet.isEnemy;
+
+      if (isEnemy) {
+        // Peluru Musuh: Orb Plasma Merah/Oranye Mematikan
+        gfx.fillStyle(0xef4444, 0.95);
+        gfx.fillCircle(0, 0, 5);
+        gfx.fillStyle(0xfef08a, 1);
+        gfx.fillCircle(0, 0, 2.5);
+      } else {
+        // Peluru Laser Pemain: Balok Laser Cyan / Hijau
+        gfx.fillStyle(isLocal ? 0x00f0ff : 0x10b981, 1);
+        gfx.fillRoundedRect(-2, -8, 4, 16, 2);
+      }
+
       gfx.x = bullet.x;
       gfx.y = bullet.y;
 
@@ -465,6 +655,7 @@ export class GameScene extends Phaser.Scene {
         sprite: gfx,
         targetX: bullet.x,
         targetY: bullet.y,
+        isEnemy,
       };
 
       this.bullets.set(bullet.id, bulletData);
@@ -483,7 +674,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 3. Sinkronisasi Koin (Coins Meluncur Turun)
+    // 3. Sinkronisasi Koin
     this.room.state.coins.onAdd((coin: any) => {
       let texture = "coin_25";
       if (coin.value === 50) texture = "coin_50";
@@ -532,10 +723,14 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 4. Sinkronisasi Musuh (Enemies Meluncur Turun)
+    // 4. Sinkronisasi Pesawat Tempur Musuh
     this.room.state.enemies.onAdd((enemy: any) => {
       const container = this.add.container(enemy.x, enemy.y).setDepth(25);
-      const sprite = this.add.sprite(0, 0, "enemy_alien");
+      const textureKey = `enemy_spaceship_${enemy.enemyType || 0}`;
+
+      // Api mesin musuh (mengarah ke atas)
+      const exhaust = this.add.sprite(0, -18, "enemy_exhaust_flame");
+      const sprite = this.add.sprite(0, 0, textureKey);
 
       const labelText = this.add.text(0, 26, enemy.name, {
         fontFamily: "'Outfit', sans-serif",
@@ -544,11 +739,12 @@ export class GameScene extends Phaser.Scene {
         color: "#f87171",
       }).setOrigin(0.5);
 
-      container.add([sprite, labelText]);
+      container.add([exhaust, sprite, labelText]);
 
       const enemyData: EnemyData = {
         container,
         sprite,
+        exhaust,
         labelText,
         targetX: enemy.x,
         targetY: enemy.y,
@@ -560,6 +756,14 @@ export class GameScene extends Phaser.Scene {
         enemyData.targetX = enemy.x;
         enemyData.targetY = enemy.y;
       });
+    });
+
+    this.room.state.enemies.onRemove((enemy: any) => {
+      const e = this.enemies.get(enemy.id);
+      if (e) {
+        e.container.destroy();
+        this.enemies.delete(enemy.id);
+      }
     });
 
     // 5. Sinkronisasi Status Room & Timer
@@ -613,14 +817,39 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.room.onMessage("player_hit", (data: any) => {
-      this.spawnFloatingText(data.x, data.y, `-50 BURNOUT! (${data.enemyName})`, "#ef4444");
+    this.room.onMessage("enemy_shoot", () => {
+      sounds.playEnemyLaser();
+    });
+
+    this.room.onMessage("player_damaged", (data: any) => {
+      this.spawnFloatingText(data.x, data.y, `TERKENA! (-1 NYAWA, SISA: ${data.hpRemaining})`, "#ef4444");
 
       if (data.playerId === this.room.sessionId) {
-        this.cameras.main.shake(250, 0.02);
+        this.cameras.main.shake(250, 0.025);
         this.cameras.main.flash(200, 255, 0, 0);
         sounds.playHit();
       }
+    });
+
+    this.room.onMessage("player_eliminated", (data: any) => {
+      this.createBigExplosionEffect(data.x, data.y);
+      this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} TERELIMINASI!`, "#f43f5e");
+    });
+
+    // Khusus untuk pemain ini jika tereliminasi (3x terkena serangan)
+    this.room.onMessage("you_are_eliminated", (data: any) => {
+      sounds.playExplosion();
+      this.cameras.main.shake(400, 0.04);
+      this.cameras.main.flash(300, 255, 0, 0);
+
+      this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 3x!");
+      this.elimScoreText.setText(
+        `Skor Pertandingan Ini: ${data.matchScore} Poin\n` +
+        `Total Akumulasi Kantor: ${data.totalScore} Poin\n` +
+        `Skor Terbaik: ${data.highestScore} | Game Dimainkan: ${data.gamesPlayed}`
+      );
+      this.eliminatedModal.setVisible(true);
+      sounds.stopBgm();
     });
 
     this.room.onMessage("game_over", () => {
@@ -646,14 +875,33 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private createBigExplosionEffect(x: number, y: number) {
+    const burst = this.add.graphics().setDepth(40);
+    burst.fillStyle(0xff2200, 1);
+    burst.fillCircle(x, y, 28);
+    burst.fillStyle(0xffaa00, 1);
+    burst.fillCircle(x, y, 16);
+
+    this.tweens.add({
+      targets: burst,
+      scaleX: 3.0,
+      scaleY: 3.0,
+      alpha: 0,
+      duration: 500,
+      ease: "Cubic.easeOut",
+      onComplete: () => burst.destroy(),
+    });
+  }
+
   private updateLeaderboard() {
     if (!this.room || !this.room.state) return;
 
-    const playerList: { name: string; score: number; isMe: boolean }[] = [];
+    const playerList: { name: string; score: number; isMe: boolean; hp: number }[] = [];
     this.room.state.players.forEach((p: any, id: string) => {
       playerList.push({
         name: p.name,
         score: p.score,
+        hp: p.hp,
         isMe: id === this.room.sessionId,
       });
     });
@@ -666,7 +914,8 @@ export class GameScene extends Phaser.Scene {
         const item = playerList[i];
         const medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : `${i + 1}.`));
         const meTag = item.isMe ? " [YOU]" : "";
-        entry.setText(`${medal} ${item.name.substring(0, 8)}${meTag}: ${item.score}`);
+        const heart = "❤️".repeat(Math.max(0, item.hp));
+        entry.setText(`${medal} ${item.name.substring(0, 6)}${meTag} ${heart}: ${item.score}`);
         entry.setColor(item.isMe ? "#00f0ff" : (i === 0 ? "#ffd700" : "#cbd5e1"));
       } else {
         entry.setText(`${i + 1}. -`);
@@ -693,7 +942,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     const dtSec = delta / 1000;
 
     // 1. Scroll Starfield
@@ -710,7 +959,7 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    // 2. Tangkap Input Pemain Lokal (Keyboard & Virtual Touch Controls)
+    // 2. Input Pemain Lokal
     if (this.room) {
       const left = (this.cursors?.left.isDown || this.wasd?.left.isDown || this.touchInput.left);
       const right = (this.cursors?.right.isDown || this.wasd?.right.isDown || this.touchInput.right);
@@ -742,18 +991,25 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // 3. Interpolasi Posisi Pemain
+    // 3. Interpolasi Posisi & Animasi Pemain
     this.players.forEach((p) => {
       p.container.x = Phaser.Math.Linear(p.container.x, p.targetX, 0.35);
       p.container.y = Phaser.Math.Linear(p.container.y, p.targetY, 0.35);
-      // Animasi kedip exhaust
       p.exhaust.scaleY = 0.8 + Math.random() * 0.4;
+
+      // Animasi Denyut Halo Beacon Pesawat Sendiri
+      if (p.isLocal && p.beaconRing) {
+        const pulseScale = 1 + Math.sin(time * 0.007) * 0.16;
+        const pulseAlpha = 0.6 + Math.sin(time * 0.007) * 0.3;
+        p.beaconRing.setScale(pulseScale);
+        p.beaconRing.setAlpha(pulseAlpha);
+      }
     });
 
     // 4. Interpolasi Posisi Peluru
     this.bullets.forEach((b) => {
       b.sprite.x = b.targetX;
-      b.sprite.y = Phaser.Math.Linear(b.sprite.y, b.targetY, 0.5);
+      b.sprite.y = Phaser.Math.Linear(b.sprite.y, b.targetY, 0.55);
     });
 
     // 5. Interpolasi Posisi Koin
@@ -762,11 +1018,11 @@ export class GameScene extends Phaser.Scene {
       c.container.y = Phaser.Math.Linear(c.container.y, c.targetY, 0.25);
     });
 
-    // 6. Interpolasi Posisi Musuh & Rotasi
+    // 6. Interpolasi Posisi Pesawat Musuh
     this.enemies.forEach((e) => {
       e.container.x = Phaser.Math.Linear(e.container.x, e.targetX, 0.3);
       e.container.y = Phaser.Math.Linear(e.container.y, e.targetY, 0.3);
-      e.sprite.rotation += 2.5 * dtSec;
+      e.exhaust.scaleY = 0.8 + Math.random() * 0.4;
     });
   }
 }

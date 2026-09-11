@@ -1,6 +1,7 @@
 import { Room, Client, ServerError } from "colyseus";
 import { PlaneRaceState, Player, Coin, Enemy, Bullet } from "./schema/PlaneRaceState";
 import { authenticateBaknusUser, BaknusUser } from "../auth/baknusAuth";
+import { ScoreDatabase } from "../db/scoreDatabase";
 
 interface PlayerInput {
   left: boolean;
@@ -20,12 +21,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private finishedTimer: number = 0;
   private bulletIdCounter: number = 0;
 
+  // Profil Pesawat Tempur Musuh
   private enemyTemplates = [
-    { name: "Deadline Dadakan", speedY: 105 },
-    { name: "Revisi Jam 12 Malam", speedY: 125 },
-    { name: "Audit Pajak", speedY: 95 },
-    { name: "Micromanagement", speedY: 135 },
-    { name: "Meeting Tanpa Hasil", speedY: 110 }
+    { name: "Deadline Dadakan", speedY: 90, shootInterval: 2.2, type: 0 },
+    { name: "Revisi Jam 12 Malam", speedY: 105, shootInterval: 1.8, type: 1 },
+    { name: "Audit Pajak", speedY: 80, shootInterval: 2.5, type: 2 },
+    { name: "Micromanagement", speedY: 110, shootInterval: 2.0, type: 3 },
+    { name: "Meeting Tanpa Hasil", speedY: 95, shootInterval: 2.4, type: 4 }
   ];
 
   async onAuth(client: Client, options: any): Promise<BaknusUser> {
@@ -45,7 +47,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     // Inisialisasi koin (8 koin meluncur bergantian dari atas)
     this.initCoins(8);
 
-    // Inisialisasi musuh (5 rintangan korporat meluncur ke bawah)
+    // Inisialisasi pesawat musuh (5 pesawat tempur korporat)
     this.initEnemies();
 
     // Terima input pemain
@@ -53,13 +55,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       const prev = this.prevUpDown.get(client.sessionId) || { up: false, down: false };
       const player = this.state.players.get(client.sessionId);
 
-      if (player) {
+      if (player && !player.isEliminated) {
         // Kontrol 3 Langkah Maju-Mundur Vertikal (Step 0: Bawah, 1: Tengah, 2: Atas)
-        // Naik (Maju 1 langkah)
         if (data.up && !prev.up) {
           player.stepY = Math.min(2, player.stepY + 1);
         }
-        // Turun (Mundur 1 langkah)
         if (data.down && !prev.down) {
           player.stepY = Math.max(0, player.stepY - 1);
         }
@@ -89,13 +89,20 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     player.name = userName;
     player.email = userEmail;
     
-    // Posisi awal di sebar horizontal sepanjang area bawah
+    // Muat rekor skor terakumulasi dari database
+    const dbRecord = ScoreDatabase.getInstance().getRecord(userName);
+    player.cumulativeScore = dbRecord ? dbRecord.totalScore : 0;
+
+    // Inisialisasi posisi dan status
     const totalCurrent = this.state.players.size;
     player.x = 160 + (totalCurrent * 120) % 500;
-    player.stepY = (totalCurrent % 3); // Berbeda tingkat langkah awal agar tidak bertumpuk
+    player.stepY = (totalCurrent % 3); // Berbeda tingkat langkah awal
     player.y = this.getStepYCoordinate(player.stepY);
     player.colorIndex = totalCurrent % 5;
     player.score = 0;
+    player.hp = 3; // 3 Nyawa penuh
+    player.maxHp = 3;
+    player.isEliminated = false;
     player.invulnerableTimer = 2.0; // Kebal 2 detik saat baru join
 
     this.state.players.set(client.sessionId, player);
@@ -107,6 +114,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
   onLeave(client: Client, consented?: boolean) {
     console.log(`[Room] Player left: ${client.sessionId}`);
+    const player = this.state.players.get(client.sessionId);
+    
+    // Jika keluar saat permainan aktif dan belum tereliminasi, simpan skor yang didapat
+    if (player && player.score > 0 && !player.isEliminated) {
+      ScoreDatabase.getInstance().addMatchScore(player.name, player.email, player.score);
+    }
+
     this.state.players.delete(client.sessionId);
     this.playerInputs.delete(client.sessionId);
     this.prevUpDown.delete(client.sessionId);
@@ -131,18 +145,21 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   private checkGameLifecycle() {
-    const totalPlayers = this.state.players.size;
+    let activePlayers = 0;
+    this.state.players.forEach((p) => {
+      if (!p.isEliminated) activePlayers++;
+    });
 
     if (this.state.status === "waiting") {
-      if (totalPlayers >= 2) {
+      if (activePlayers >= 2) {
         console.log("[Room] Minimal 2 pemain terpenuhi! Memulai race survival 120s...");
         this.state.status = "playing";
         this.state.countdown = 120;
         this.timerAccumulator = 0;
       }
     } else if (this.state.status === "playing") {
-      if (totalPlayers < 2) {
-        console.log("[Room] Pemain kurang dari 2. Mengembalikan state ke waiting...");
+      if (activePlayers < 1) {
+        console.log("[Room] Seluruh pemain tereliminasi / keluar. Mengembalikan state ke waiting...");
         this.state.status = "waiting";
         this.state.countdown = 120;
       }
@@ -154,7 +171,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     for (let i = 0; i < count; i++) {
       const coin = new Coin();
       coin.id = `coin_${i}`;
-      this.randomizeCoin(coin, -40 - (i * 70)); // Stagger spawn dari atas
+      this.randomizeCoin(coin, -40 - (i * 70));
       this.state.coins.push(coin);
     }
   }
@@ -164,7 +181,6 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     coin.y = customY !== undefined ? customY : -40 - Math.random() * 120;
     coin.speedY = 70 + Math.random() * 45;
 
-    // Bobot: 60% Lembur (25), 30% Tunjangan (50), 10% Bonus KPI (100)
     const roll = Math.random();
     if (roll < 0.60) {
       coin.value = 25;
@@ -188,18 +204,21 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       const enemy = new Enemy();
       enemy.id = `enemy_${i}`;
       enemy.name = template.name;
-      enemy.radius = 22;
-      this.respawnEnemy(enemy, -60 - (i * 90), template.speedY);
+      enemy.radius = 24;
+      enemy.enemyType = template.type;
+      enemy.shootTimer = Math.random() * 1.5; // Stagger tembakan awal
+      this.respawnEnemy(enemy, -70 - (i * 100), template.speedY);
       this.state.enemies.push(enemy);
     }
   }
 
-  private respawnEnemy(enemy: Enemy, customY?: number, baseSpeed: number = 110) {
+  private respawnEnemy(enemy: Enemy, customY?: number, baseSpeed: number = 95) {
     enemy.x = 70 + Math.random() * 660;
-    enemy.y = customY !== undefined ? customY : -60 - Math.random() * 140;
-    enemy.speedY = baseSpeed + (Math.random() * 30 - 15);
-    enemy.speedX = (Math.random() - 0.5) * 60; // Gerakan meliuk horizontal
+    enemy.y = customY !== undefined ? customY : -70 - Math.random() * 140;
+    enemy.speedY = baseSpeed + (Math.random() * 25 - 12);
+    enemy.speedX = (Math.random() - 0.5) * 50;
     enemy.hp = 1;
+    enemy.shootTimer = Math.random() * 1.0;
   }
 
   private update(deltaTime: number) {
@@ -225,10 +244,12 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     }
 
     // 2. Update Pergerakan & Tembakan Pemain
-    const moveSpeedX = 330; // Kecepatan geser kiri-kanan
+    const moveSpeedX = 330;
     const playerRadius = 18;
 
     this.state.players.forEach((player, sessionId) => {
+      if (player.isEliminated) return;
+
       if (player.invulnerableTimer > 0) {
         player.invulnerableTimer = Math.max(0, player.invulnerableTimer - dtSec);
       }
@@ -236,7 +257,6 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       if (this.state.status !== "finished") {
         const input = this.playerInputs.get(sessionId) || { left: false, right: false, up: false, down: false, shoot: false };
 
-        // Geser Kiri / Kanan
         if (input.left) {
           player.x -= moveSpeedX * dtSec;
         }
@@ -244,107 +264,59 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           player.x += moveSpeedX * dtSec;
         }
 
-        // Batas Arena Kiri-Kanan (800 px)
         player.x = Math.max(35, Math.min(765, player.x));
 
         // Transisi Halus Maju/Mundur 3 Langkah Vertikal
         const targetY = this.getStepYCoordinate(player.stepY);
         player.y += (targetY - player.y) * 12 * dtSec;
 
-        // Mekanisme Menembak Laser
+        // Mekanisme Menembak Laser Pemain
         if (input.shoot) {
           const lastShoot = this.lastShootTimes.get(sessionId) || 0;
-          if (now - lastShoot >= 220) { // Cooldown 220ms
+          if (now - lastShoot >= 220) {
             this.lastShootTimes.set(sessionId, now);
-            this.spawnBullet(player);
+            this.spawnPlayerBullet(player);
           }
         }
       }
     });
 
-    // 3. Deteksi Tabrakan Antar Pemain (Efek Terpental / Solid Collision)
+    // 3. Deteksi Tabrakan Antar Pemain (Efek Terpental)
     const playerArray: Player[] = [];
-    this.state.players.forEach((p) => playerArray.push(p));
+    this.state.players.forEach((p) => {
+      if (!p.isEliminated) playerArray.push(p);
+    });
 
     for (let i = 0; i < playerArray.length; i++) {
       for (let j = i + 1; j < playerArray.length; j++) {
         const p1 = playerArray[i];
         const p2 = playerArray[j];
         const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        const minDist = 38; // Jarak aman antar pesawat
+        const minDist = 38;
 
         if (dist < minDist && dist > 0.001) {
           const overlap = (minDist - dist);
           const nx = (p1.x - p2.x) / dist;
           const ny = (p1.y - p2.y) / dist;
 
-          // Terpental elastis menjauh satu sama lain
           const push = overlap * 0.6 + 2;
           p1.x += nx * push;
           p1.y += ny * push;
           p2.x -= nx * push;
           p2.y -= ny * push;
 
-          // Pastikan tetap dalam batas arena
           p1.x = Math.max(35, Math.min(765, p1.x));
           p2.x = Math.max(35, Math.min(765, p2.x));
         }
       }
     }
 
-    // 4. Update Peluru (Bergerak Cepat ke Atas)
-    for (let i = this.state.bullets.length - 1; i >= 0; i--) {
-      const b = this.state.bullets[i];
-      if (!b) continue;
-
-      b.y -= 680 * dtSec;
-
-      // Hapus peluru jika lewat atas layar
-      if (b.y < -30) {
-        this.state.bullets.splice(i, 1);
-        continue;
-      }
-
-      // Tabrakan Peluru dengan Musuh
-      let hit = false;
-      for (let j = 0; j < this.state.enemies.length; j++) {
-        const enemy = this.state.enemies[j];
-        if (!enemy) continue;
-
-        if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < enemy.radius + 6) {
-          // Berikan skor ke penembak (+40 Poin Lembur/Bonus)
-          const shooter = this.state.players.get(b.playerId);
-          if (shooter) {
-            shooter.score += 40;
-          }
-
-          // Efek ledakan ke klien
-          this.broadcast("enemy_destroyed", {
-            x: enemy.x,
-            y: enemy.y,
-            enemyName: enemy.name,
-            killerId: b.playerId,
-            points: 40
-          });
-
-          // Respawn musuh kembali di atas
-          this.respawnEnemy(enemy, undefined, 110);
-          hit = true;
-          break;
-        }
-      }
-
-      if (hit) {
-        this.state.bullets.splice(i, 1);
-      }
-    }
-
-    // 5. Update Musuh (Meluncur Turun ke Bawah)
+    // 4. Update Pesawat Musuh & Tembakan Peluru Musuh
     this.state.enemies.forEach((enemy) => {
       enemy.y += enemy.speedY * dtSec;
       enemy.x += enemy.speedX * dtSec;
 
-      // Pantulan horizontal musuh
+      // Pantulan horizontal
       if (enemy.x <= enemy.radius + 20) {
         enemy.x = enemy.radius + 20;
         enemy.speedX = Math.abs(enemy.speedX);
@@ -353,81 +325,243 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         enemy.speedX = -Math.abs(enemy.speedX);
       }
 
-      // Jika musuh lewat bawah layar, respawn kembali di atas
-      if (enemy.y > 640) {
-        this.respawnEnemy(enemy, undefined, 110);
+      // Tembakan Peluru Lambat Pesawat Musuh
+      if (this.state.status === "playing" && enemy.y > 20 && enemy.y < 460) {
+        enemy.shootTimer += dtSec;
+        const shootInterval = 2.2; // Rata-rata 2.2 detik
+        if (enemy.shootTimer >= shootInterval) {
+          enemy.shootTimer = 0;
+          this.spawnEnemyBullet(enemy);
+        }
       }
 
-      // Tabrakan Musuh dengan Pemain
+      // Respawn jika lewat bawah layar
+      if (enemy.y > 640) {
+        this.respawnEnemy(enemy, undefined, 95);
+      }
+
+      // Tabrakan Langsung Pesawat Musuh dengan Pemain
       if (this.state.status === "playing") {
         this.state.players.forEach((player, sessionId) => {
-          if (player.invulnerableTimer <= 0) {
+          if (!player.isEliminated && player.invulnerableTimer <= 0) {
             const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
             if (dist < (playerRadius + enemy.radius)) {
-              // Penalti -50 poin
-              player.score = Math.max(0, player.score - 50);
-              player.invulnerableTimer = 2.5;
-
-              // Pentalan ke belakang
-              player.stepY = 0; // Terpental ke baris paling belakang
-              player.y = this.getStepYCoordinate(0);
-
-              // Respawn musuh
-              this.respawnEnemy(enemy, undefined, 110);
-
-              this.broadcast("player_hit", {
-                playerId: sessionId,
-                playerName: player.name,
-                enemyName: enemy.name,
-                penalty: 50,
-                x: player.x,
-                y: player.y
-              });
+              this.damagePlayer(player, sessionId, enemy.name);
+              this.respawnEnemy(enemy, undefined, 95);
             }
           }
         });
       }
     });
 
+    // 5. Update Semua Peluru (Pemain & Musuh)
+    for (let i = this.state.bullets.length - 1; i >= 0; i--) {
+      const b = this.state.bullets[i];
+      if (!b) continue;
+
+      if (b.isEnemy) {
+        // Peluru musuh meluncur ke bawah dengan lambat (150 px/detik)
+        b.y += (b.speedY || 150) * dtSec;
+
+        // Hapus jika lewat batas bawah layar
+        if (b.y > 630) {
+          this.state.bullets.splice(i, 1);
+          continue;
+        }
+
+        // Tabrakan Peluru Musuh dengan Pemain
+        let hitPlayer = false;
+        if (this.state.status === "playing") {
+          this.state.players.forEach((player, sessionId) => {
+            if (!hitPlayer && !player.isEliminated && player.invulnerableTimer <= 0) {
+              const dist = Math.hypot(b.x - player.x, b.y - player.y);
+              if (dist < (playerRadius + 8)) {
+                hitPlayer = true;
+                this.damagePlayer(player, sessionId, "Peluru Pesawat Musuh");
+              }
+            }
+          });
+        }
+
+        if (hitPlayer) {
+          this.state.bullets.splice(i, 1);
+          continue;
+        }
+
+      } else {
+        // Peluru laser pemain meluncur cepat ke atas (680 px/detik)
+        b.y -= (b.speedY || 680) * dtSec;
+
+        // Hapus jika lewat atas layar
+        if (b.y < -30) {
+          this.state.bullets.splice(i, 1);
+          continue;
+        }
+
+        // Tabrakan Peluru Pemain dengan Pesawat Musuh
+        let hitEnemy = false;
+        for (let j = 0; j < this.state.enemies.length; j++) {
+          const enemy = this.state.enemies[j];
+          if (!enemy) continue;
+
+          if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < enemy.radius + 8) {
+            const shooter = this.state.players.get(b.playerId);
+            if (shooter && !shooter.isEliminated) {
+              shooter.score += 40;
+            }
+
+            this.broadcast("enemy_destroyed", {
+              x: enemy.x,
+              y: enemy.y,
+              enemyName: enemy.name,
+              killerId: b.playerId,
+              points: 40
+            });
+
+            this.respawnEnemy(enemy, undefined, 95);
+            hitEnemy = true;
+            break;
+          }
+        }
+
+        if (hitEnemy) {
+          this.state.bullets.splice(i, 1);
+          continue;
+        }
+      }
+    }
+
     // 6. Update Koin (Meluncur Turun ke Bawah)
     this.state.coins.forEach((coin) => {
       coin.y += coin.speedY * dtSec;
 
-      // Jika koin lewat bawah, respawn kembali di atas
       if (coin.y > 630) {
         this.randomizeCoin(coin);
       }
 
-      // Tabrakan Koin dengan Pemain
       if (this.state.status === "playing") {
         this.state.players.forEach((player, sessionId) => {
-          const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
-          if (dist < (playerRadius + coin.radius)) {
-            player.score += coin.value;
+          if (!player.isEliminated) {
+            const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
+            if (dist < (playerRadius + coin.radius)) {
+              player.score += coin.value;
 
-            this.broadcast("coin_collected", {
-              playerId: sessionId,
-              playerName: player.name,
-              x: coin.x,
-              y: coin.y,
-              value: coin.value,
-              label: coin.label
-            });
+              this.broadcast("coin_collected", {
+                playerId: sessionId,
+                playerName: player.name,
+                x: coin.x,
+                y: coin.y,
+                value: coin.value,
+                label: coin.label
+              });
 
-            this.randomizeCoin(coin);
+              this.randomizeCoin(coin);
+            }
           }
         });
       }
     });
   }
 
-  private spawnBullet(player: Player) {
+  private spawnPlayerBullet(player: Player) {
     const bullet = new Bullet();
     bullet.id = `bullet_${this.bulletIdCounter++}`;
     bullet.playerId = player.id;
     bullet.x = player.x;
     bullet.y = player.y - 18;
+    bullet.isEnemy = false;
+    bullet.speedY = 680;
     this.state.bullets.push(bullet);
+  }
+
+  private spawnEnemyBullet(enemy: Enemy) {
+    const bullet = new Bullet();
+    bullet.id = `ebullet_${this.bulletIdCounter++}`;
+    bullet.playerId = "";
+    bullet.x = enemy.x;
+    bullet.y = enemy.y + enemy.radius + 4;
+    bullet.isEnemy = true;
+    bullet.speedY = 150; // Peluru pelan ke bawah
+    this.state.bullets.push(bullet);
+
+    this.broadcast("enemy_shoot", {
+      x: bullet.x,
+      y: bullet.y
+    });
+  }
+
+  /**
+   * Logika Pengurangan Nyawa (HP) saat tertembak atau tertabrak
+   */
+  private damagePlayer(player: Player, sessionId: string, sourceName: string) {
+    player.hp = Math.max(0, player.hp - 1);
+    player.invulnerableTimer = 1.8; // Kebal 1.8 detik
+    player.score = Math.max(0, player.score - 30);
+    player.stepY = 0; // Terpental ke belakang
+    player.y = this.getStepYCoordinate(0);
+
+    console.log(`[Room] Player ${player.name} terkena ${sourceName}. Sisa HP: ${player.hp}/3`);
+
+    this.broadcast("player_damaged", {
+      playerId: sessionId,
+      playerName: player.name,
+      hpRemaining: player.hp,
+      maxHp: player.maxHp,
+      source: sourceName,
+      x: player.x,
+      y: player.y
+    });
+
+    // Jika tertembak 3x (HP habis), Game Over dan Kick dari room!
+    if (player.hp <= 0) {
+      this.eliminatePlayer(player, sessionId, sourceName);
+    }
+  }
+
+  /**
+   * Menangani Eliminasi Pemain, Akumulasi Poin ke Database, dan Auto-Kick
+   */
+  private eliminatePlayer(player: Player, sessionId: string, killerSource: string) {
+    player.isEliminated = true;
+
+    // Simpan akumulasi skor ke database persisten
+    const record = ScoreDatabase.getInstance().addMatchScore(player.name, player.email, player.score);
+    player.cumulativeScore = record.totalScore;
+
+    console.log(`[Room] Player ${player.name} TERELIMINASI! Skor match: ${player.score}, Total akumulasi baru: ${record.totalScore}`);
+
+    this.broadcast("player_eliminated", {
+      playerId: sessionId,
+      playerName: player.name,
+      matchScore: player.score,
+      totalScore: record.totalScore,
+      highestScore: record.highestScore,
+      killer: killerSource,
+      x: player.x,
+      y: player.y
+    });
+
+    const client = this.clients.find(c => c.sessionId === sessionId);
+    if (client) {
+      // Kirim pesan langsung ke klien yang bersangkutan
+      client.send("you_are_eliminated", {
+        message: `Pesawat Anda hancur terkena serangan 3x oleh ${killerSource}!`,
+        matchScore: player.score,
+        totalScore: record.totalScore,
+        highestScore: record.highestScore,
+        gamesPlayed: record.gamesPlayed
+      });
+
+      // Beri jeda 1.2 detik agar animasi ledakan dan popup game over di klien terlihat
+      this.clock.setTimeout(() => {
+        try {
+          console.log(`[Room] Menendang ${player.name} keluar room karena tereliminasi.`);
+          client.leave(4001); // 4001: Game Over / Eliminated
+        } catch (e) {}
+      }, 1200);
+    }
+
+    this.checkGameLifecycle();
   }
 
   private endGame() {
@@ -437,7 +571,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     let topScore = -1;
     let winner = "Tidak Ada";
 
+    // Akumulasikan skor seluruh pemain yang bertahan ke database
     this.state.players.forEach((p) => {
+      if (!p.isEliminated && p.score > 0) {
+        const record = ScoreDatabase.getInstance().addMatchScore(p.name, p.email, p.score);
+        p.cumulativeScore = record.totalScore;
+      }
+
       if (p.score > topScore) {
         topScore = p.score;
         winner = p.name;
@@ -463,6 +603,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     let idx = 0;
     this.state.players.forEach((player) => {
       player.score = 0;
+      player.hp = 3;
+      player.isEliminated = false;
       player.stepY = idx % 3;
       player.x = 160 + (idx * 120) % 500;
       player.y = this.getStepYCoordinate(player.stepY);
@@ -473,12 +615,15 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.initCoins(8);
     this.initEnemies();
 
-    if (this.state.players.size >= 2) {
+    let active = 0;
+    this.state.players.forEach(p => { if (!p.isEliminated) active++; });
+
+    if (active >= 2) {
       this.state.status = "playing";
     } else {
       this.state.status = "waiting";
     }
 
-    console.log("[Room] Ronde baru dimulai!");
+    console.log("[Room] Ronde baru survival dimulai!");
   }
 }
