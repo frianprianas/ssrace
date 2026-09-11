@@ -100,7 +100,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
     // Inisialisasi posisi dan status: SEMUA pemain mulai di row netral yang sama (stepY = 2)
     const totalCurrent = this.state.players.size;
-    player.x = 160 + (totalCurrent * 120) % 500;
+    player.x = 120 + (totalCurrent * 90) % 360;
     player.stepY = 2; // Posisi netral seragam untuk semua pemain
     player.y = this.getStepYCoordinate(player.stepY);
     player.colorIndex = totalCurrent % 5;
@@ -142,13 +142,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   private getStepYCoordinate(step: number): number {
-    // Step 0: Mundur 2 langkah (580)
-    // Step 1: Mundur 1 langkah (545)
-    // Step 2: Posisi Netral / Default untuk SEMUA pemain (510)
-    // Step 3: Maju 1 langkah (475)
-    // Step 4: Maju 2 langkah (440)
+    // Step 0: Mundur 2 langkah (900)
+    // Step 1: Mundur 1 langkah (860)
+    // Step 2: Posisi Netral / Default untuk SEMUA pemain (820)
+    // Step 3: Maju 1 langkah (780)
+    // Step 4: Maju 2 langkah (740)
     const clamped = Math.max(0, Math.min(4, step));
-    return 510 - (clamped - 2) * 35;
+    return 820 - (clamped - 2) * 40;
   }
 
   private checkGameLifecycle() {
@@ -184,9 +184,9 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   private randomizeCoin(coin: Coin, customY?: number) {
-    coin.x = 50 + Math.random() * 700;
+    coin.x = 40 + Math.random() * 520;
     coin.y = customY !== undefined ? customY : -40 - Math.random() * 120;
-    coin.speedY = 70 + Math.random() * 45;
+    coin.speedY = 75 + Math.random() * 50;
 
     const roll = Math.random();
     if (roll < 0.60) {
@@ -220,7 +220,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   private respawnEnemy(enemy: Enemy, customY?: number, baseSpeed: number = 95) {
-    enemy.x = 70 + Math.random() * 660;
+    enemy.x = 50 + Math.random() * 500;
     enemy.y = customY !== undefined ? customY : -70 - Math.random() * 140;
     enemy.speedY = baseSpeed + (Math.random() * 25 - 12);
     enemy.speedX = (Math.random() - 0.5) * 50;
@@ -250,8 +250,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     }
 
-    // 2. Update Pergerakan & Tembakan Pemain (Kecepatan geser 260 agar stabil di smartphone)
-    const moveSpeedX = 260;
+    // 2. Update Pergerakan & Tembakan Pemain (Kecepatan geser 210 agar lebih terkendali dan tidak terlalu sensitif)
+    const moveSpeedX = 210;
     const playerRadius = 22; // Ukuran pesawat diperbesar (sebelumnya 18)
 
     this.state.players.forEach((player, sessionId) => {
@@ -271,7 +271,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           player.x += moveSpeedX * dtSec;
         }
 
-        player.x = Math.max(35, Math.min(765, player.x));
+        player.x = Math.max(35, Math.min(565, player.x));
 
         // Transisi Halus Maju/Mundur 3 Langkah Vertikal
         const targetY = this.getStepYCoordinate(player.stepY);
@@ -313,10 +313,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           p2.x -= nx * pushForce;
           p2.y -= ny * (pushForce * 0.5);
 
-          p1.x = Math.max(35, Math.min(765, p1.x));
-          p2.x = Math.max(35, Math.min(765, p2.x));
-          p1.y = Math.max(430, Math.min(590, p1.y));
-          p2.y = Math.max(430, Math.min(590, p2.y));
+          p1.x = Math.max(35, Math.min(565, p1.x));
+          p2.x = Math.max(35, Math.min(565, p2.x));
+          p1.y = Math.max(720, Math.min(920, p1.y));
+          p2.y = Math.max(720, Math.min(920, p2.y));
 
           // Broadcast efek fisika ke semua client (dibatasi 220ms per pasangan)
           const pairKey = p1.id < p2.id ? `${p1.id}_${p2.id}` : `${p2.id}_${p1.id}`;
@@ -345,16 +345,16 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       enemy.x += enemy.speedX * dtSec;
 
       // Pantulan horizontal
-      if (enemy.x <= enemy.radius + 20) {
-        enemy.x = enemy.radius + 20;
+      if (enemy.x <= enemy.radius + 15) {
+        enemy.x = enemy.radius + 15;
         enemy.speedX = Math.abs(enemy.speedX);
-      } else if (enemy.x >= 800 - enemy.radius - 20) {
-        enemy.x = 800 - enemy.radius - 20;
+      } else if (enemy.x >= 600 - enemy.radius - 15) {
+        enemy.x = 600 - enemy.radius - 15;
         enemy.speedX = -Math.abs(enemy.speedX);
       }
 
       // Tembakan Peluru Lambat Pesawat Musuh
-      if (this.state.status !== "finished" && enemy.y > 15 && enemy.y < 520) {
+      if (this.state.status !== "finished" && enemy.y > 20 && enemy.y < 820) {
         enemy.shootTimer += dtSec;
         const shootInterval = 1.8; // Menembak peluru plasma setiap 1.8 detik
         if (enemy.shootTimer >= shootInterval) {
@@ -364,7 +364,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       // Respawn jika lewat bawah layar
-      if (enemy.y > 640) {
+      if (enemy.y > 1000) {
         this.respawnEnemy(enemy, undefined, 95);
       }
 
@@ -463,7 +463,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.state.coins.forEach((coin) => {
       coin.y += coin.speedY * dtSec;
 
-      if (coin.y > 630) {
+      if (coin.y > 990) {
         this.randomizeCoin(coin);
       }
 
@@ -641,7 +641,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       player.maxHp = 5;
       player.isEliminated = false;
       player.stepY = 2; // Posisi netral seragam untuk semua pemain
-      player.x = 160 + (idx * 120) % 500;
+      player.x = 120 + (idx * 90) % 360;
       player.y = this.getStepYCoordinate(player.stepY);
       player.invulnerableTimer = 2.0;
       idx++;

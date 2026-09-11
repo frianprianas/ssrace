@@ -125,7 +125,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       sounds.unlockAudio();
       // Hanya jika tap di area kanan atas canvas (bukan area kontrol touch D-Pad)
-      if (pointer.x > 480 && pointer.y < 460) {
+      if (pointer.x > 380 && pointer.y < 750) {
         this.touchInput.shoot = true;
       }
     });
@@ -138,12 +138,12 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      // Kendali geser halus dengan deadzone 35px agar tidak over-steering di smartphone
-      if (pointer.isDown && pointer.x <= 500 && pointer.y < 460) {
+      // Kendali geser halus dengan deadzone 40px agar tidak over-steering di smartphone
+      if (pointer.isDown && pointer.x <= 450 && pointer.y < 750) {
         const myPlayer = this.players.get(this.room?.sessionId || "");
         if (myPlayer) {
           const diff = pointer.x - myPlayer.container.x;
-          if (Math.abs(diff) > 35) {
+          if (Math.abs(diff) > 40) {
             this.touchInput.left = diff < 0;
             this.touchInput.right = diff > 0;
           } else {
@@ -169,22 +169,22 @@ export class GameScene extends Phaser.Scene {
   private initStarfield() {
     this.starGraphics = this.add.graphics().setDepth(1);
     this.stars = [];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 140; i++) {
       this.stars.push({
-        x: Math.random() * 800,
-        y: Math.random() * 600,
-        speed: 40 + Math.random() * 160,
-        size: Math.random() < 0.25 ? 2.5 : (Math.random() < 0.6 ? 1.8 : 1),
+        x: Math.random() * 600,
+        y: Math.random() * 960,
+        speed: 40 + Math.random() * 180,
+        size: Math.random() < 0.25 ? 2.6 : (Math.random() < 0.6 ? 1.8 : 1),
         alpha: 0.3 + Math.random() * 0.7,
       });
     }
 
-    // Garis pertahanan neon bawah
+    // Garis pertahanan neon bawah untuk arena balap 600x960
     const defLine = this.add.graphics().setDepth(2);
-    defLine.lineStyle(1.5, 0x00f0ff, 0.35);
-    defLine.lineBetween(0, 440, 800, 440);
-    defLine.lineStyle(1, 0x334155, 0.5);
-    defLine.lineBetween(0, 560, 800, 560);
+    defLine.lineStyle(1.5, 0x00f0ff, 0.4);
+    defLine.lineBetween(0, 720, 600, 720);
+    defLine.lineStyle(1, 0x334155, 0.55);
+    defLine.lineBetween(0, 920, 600, 920);
   }
 
   /**
@@ -320,14 +320,14 @@ export class GameScene extends Phaser.Scene {
     // Header Background Bar
     const hudBar = this.add.graphics().setDepth(100);
     hudBar.fillStyle(0x0f172a, 0.9);
-    hudBar.fillRoundedRect(12, 12, 776, 48, 8);
+    hudBar.fillRoundedRect(8, 10, 584, 46, 8);
     hudBar.lineStyle(1, 0x00f0ff, 0.35);
-    hudBar.strokeRoundedRect(12, 12, 776, 48, 8);
+    hudBar.strokeRoundedRect(8, 10, 584, 46, 8);
 
     // 1. Status Room (Kiri)
-    this.statusBadge = this.add.text(24, hudY + 12, "STANDBY", {
+    this.statusBadge = this.add.text(18, hudY + 11, "STANDBY", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "12px",
+      fontSize: "11px",
       fontStyle: "bold",
       color: "#38bdf8",
     }).setOrigin(0, 0.5).setDepth(101);
@@ -335,43 +335,43 @@ export class GameScene extends Phaser.Scene {
     // 2. Health / Darah Progress Bar (Pemain Lokal)
     const hpBox = this.add.graphics().setDepth(101);
     hpBox.fillStyle(0x050b14, 0.95);
-    hpBox.fillRoundedRect(190, hudY + 4, 116, 16, 4);
+    hpBox.fillRoundedRect(165, hudY + 4, 94, 16, 4);
     hpBox.lineStyle(1, 0x334155, 0.8);
-    hpBox.strokeRoundedRect(190, hudY + 4, 116, 16, 4);
+    hpBox.strokeRoundedRect(165, hudY + 4, 94, 16, 4);
 
     this.myHpBarFill = this.add.graphics().setDepth(102);
 
-    this.myHpText = this.add.text(182, hudY + 12, "🛡️", {
-      fontSize: "13px"
+    this.myHpText = this.add.text(158, hudY + 11, "🛡️", {
+      fontSize: "12px"
     }).setOrigin(1, 0.5).setDepth(103);
 
-    this.myHpValText = this.add.text(248, hudY + 12, "5/5 (100%)", {
+    this.myHpValText = this.add.text(212, hudY + 11, "5/5 (100%)", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "10px",
+      fontSize: "9.5px",
       fontStyle: "bold",
       color: "#ffffff"
     }).setOrigin(0.5, 0.5).setDepth(103);
 
     // 3. Countdown Timer (Tengah)
-    this.timerText = this.add.text(395, hudY + 12, "WAKTU: 120s", {
+    this.timerText = this.add.text(320, hudY + 11, "WAKTU: 120s", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "15px",
+      fontSize: "13px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5, 0.5).setDepth(101);
 
     // 4. Skor Match Ini
-    this.myScoreText = this.add.text(550, hudY + 12, "MATCH: 0", {
+    this.myScoreText = this.add.text(435, hudY + 11, "MATCH: 0", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "13px",
+      fontSize: "12px",
       fontStyle: "bold",
       color: "#00f0ff",
     }).setOrigin(0.5, 0.5).setDepth(101);
 
     // 5. Total Akumulasi Skor Kantor (Kanan)
-    this.myCumulativeText = this.add.text(772, hudY + 12, "TOTAL: 0", {
+    this.myCumulativeText = this.add.text(582, hudY + 11, "TOTAL: 0", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "12px",
+      fontSize: "11px",
       fontStyle: "bold",
       color: "#a855f7",
     }).setOrigin(1, 0.5).setDepth(101);
@@ -380,15 +380,15 @@ export class GameScene extends Phaser.Scene {
     this.updateHUDHealthBar(5, 5);
 
     // Leaderboard Match Box (Top 5) di kanan atas
-    this.leaderboardContainer = this.add.container(620, 70).setDepth(100);
+    this.leaderboardContainer = this.add.container(444, 64).setDepth(100);
     const lbBg = this.add.graphics();
     lbBg.fillStyle(0x0f172a, 0.88);
-    lbBg.fillRoundedRect(0, 0, 160, 140, 8);
+    lbBg.fillRoundedRect(0, 0, 146, 114, 8);
     lbBg.lineStyle(1, 0x00f0ff, 0.35);
-    lbBg.strokeRoundedRect(0, 0, 160, 140, 8);
+    lbBg.strokeRoundedRect(0, 0, 146, 114, 8);
     this.leaderboardContainer.add(lbBg);
 
-    const lbTitle = this.add.text(80, 12, "🏆 LIVE MATCH", {
+    const lbTitle = this.add.text(73, 12, "🏆 LIVE MATCH", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "11px",
       fontStyle: "bold",
@@ -398,9 +398,9 @@ export class GameScene extends Phaser.Scene {
 
     this.leaderboardEntries = [];
     for (let i = 0; i < 5; i++) {
-      const entry = this.add.text(12, 34 + i * 19, `${i + 1}. -`, {
+      const entry = this.add.text(10, 28 + i * 16, `${i + 1}. -`, {
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: "10px",
+        fontSize: "9px",
         color: "#94a3b8",
       });
       this.leaderboardContainer.add(entry);
@@ -409,18 +409,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createFinishedModal() {
-    this.modalContainer = this.add.container(400, 300).setDepth(500).setVisible(false);
+    this.modalContainer = this.add.container(300, 460).setDepth(500).setVisible(false);
 
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x050b14, 0.9);
-    backdrop.fillRoundedRect(-220, -140, 440, 280, 16);
+    backdrop.fillStyle(0x050b14, 0.92);
+    backdrop.fillRoundedRect(-200, -140, 400, 280, 16);
     backdrop.lineStyle(2, 0xffd700, 0.85);
-    backdrop.strokeRoundedRect(-220, -140, 440, 280, 16);
+    backdrop.strokeRoundedRect(-200, -140, 400, 280, 16);
     this.modalContainer.add(backdrop);
 
     const title = this.add.text(0, -95, "🏁 RACE SURVIVAL SELESAI! 🏁", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "22px",
+      fontSize: "20px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5);
@@ -428,7 +428,7 @@ export class GameScene extends Phaser.Scene {
 
     this.modalWinner = this.add.text(0, -15, "Menghitung skor...", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "16px",
+      fontSize: "15px",
       fontStyle: "bold",
       color: "#fff",
       align: "center",
@@ -437,7 +437,7 @@ export class GameScene extends Phaser.Scene {
 
     const sub = this.add.text(0, 75, "Poin Anda telah diakumulasikan ke Database Kantor!\nRonde berikutnya dimulai otomatis...", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "12px",
+      fontSize: "11px",
       color: "#94a3b8",
       align: "center",
     }).setOrigin(0.5);
@@ -445,34 +445,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createEliminatedModal() {
-    this.eliminatedModal = this.add.container(400, 300).setDepth(600).setVisible(false);
+    this.eliminatedModal = this.add.container(300, 460).setDepth(600).setVisible(false);
 
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x0a0508, 0.94);
-    backdrop.fillRoundedRect(-230, -160, 460, 320, 16);
+    backdrop.fillStyle(0x0a0508, 0.95);
+    backdrop.fillRoundedRect(-220, -165, 440, 330, 16);
     backdrop.lineStyle(2.5, 0xef4444, 0.9);
-    backdrop.strokeRoundedRect(-230, -160, 460, 320, 16);
+    backdrop.strokeRoundedRect(-220, -165, 440, 330, 16);
     this.eliminatedModal.add(backdrop);
 
-    const title = this.add.text(0, -110, "💥 TERELIMINASI! (GAME OVER) 💥", {
+    const title = this.add.text(0, -112, "💥 TERELIMINASI! (GAME OVER) 💥", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "22px",
+      fontSize: "20px",
       fontStyle: "bold",
       color: "#ef4444",
     }).setOrigin(0.5);
     this.eliminatedModal.add(title);
 
-    this.elimReasonText = this.add.text(0, -55, "Pesawat Anda terkena tembakan musuh 5x!", {
+    this.elimReasonText = this.add.text(0, -60, "Pesawat Anda terkena tembakan musuh 5x!", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "14px",
+      fontSize: "13px",
       color: "#fca5a5",
       align: "center",
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimReasonText);
 
-    this.elimScoreText = this.add.text(0, 10, "Skor Match: 0 Poin\nTotal Akumulasi Kantor: 0 Poin", {
+    this.elimScoreText = this.add.text(0, 5, "Skor Match: 0 Poin\nTotal Akumulasi Kantor: 0 Poin", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "15px",
+      fontSize: "14px",
       fontStyle: "bold",
       color: "#ffd700",
       align: "center",
@@ -483,18 +483,18 @@ export class GameScene extends Phaser.Scene {
     // Tombol Masuk Arena Balap Lagi
     const btnRejoin = this.add.graphics();
     btnRejoin.fillStyle(0x00f0ff, 1);
-    btnRejoin.fillRoundedRect(-150, 85, 300, 44, 8);
+    btnRejoin.fillRoundedRect(-140, 80, 280, 44, 8);
     this.eliminatedModal.add(btnRejoin);
 
-    const btnText = this.add.text(0, 107, "🚀 MASUK ARENA BALAP LAGI", {
+    const btnText = this.add.text(0, 102, "🚀 MASUK ARENA BALAP LAGI", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "15px",
+      fontSize: "14px",
       fontStyle: "bold",
       color: "#050b14",
     }).setOrigin(0.5);
     this.eliminatedModal.add(btnText);
 
-    const hitZone = this.add.zone(0, 107, 300, 44).setInteractive({ cursor: "pointer" });
+    const hitZone = this.add.zone(0, 102, 280, 44).setInteractive({ cursor: "pointer" });
     hitZone.on("pointerdown", () => {
       this.eliminatedModal.setVisible(false);
       this.reconnect();
@@ -595,13 +595,13 @@ export class GameScene extends Phaser.Scene {
       if (isLocal) {
         beaconRing = this.add.graphics();
         beaconRing.lineStyle(2.5, 0x00f0ff, 0.85);
-        beaconRing.strokeCircle(0, 0, 32);
+        beaconRing.strokeCircle(0, 0, 36);
         beaconRing.fillStyle(0x00f0ff, 0.15);
-        beaconRing.fillCircle(0, 0, 32);
+        beaconRing.fillCircle(0, 0, 36);
         container.add(beaconRing);
 
         // Label Tag Panah "▼ ANDA" di atas kepala pesawat
-        markerTag = this.add.text(0, -44, "▼ ANDA", {
+        markerTag = this.add.text(0, -52, "▼ ANDA", {
           fontFamily: "'Outfit', sans-serif",
           fontSize: "11px",
           fontStyle: "bold",
@@ -611,34 +611,34 @@ export class GameScene extends Phaser.Scene {
       }
 
       // Api knalpot mesin
-      const exhaust = this.add.sprite(0, 20, "exhaust_flame");
-      exhaust.setScale(1.3);
+      const exhaust = this.add.sprite(0, 22, "exhaust_flame");
+      exhaust.setScale(1.35);
 
-      // Sprite Pesawat Pemain (Diperbesar 35% agar gagah & jelas di smartphone)
+      // Sprite Pesawat Pemain (Diperbesar agar gagah & jelas di smartphone)
       const sprite = this.add.sprite(0, 0, textureKey);
-      sprite.setScale(1.35);
+      sprite.setScale(1.4);
 
       // Label Nama
       const displayName = isLocal ? `★ ${player.name}` : player.name;
-      const nameText = this.add.text(0, -28, displayName, {
+      const nameText = this.add.text(0, -36, displayName, {
         fontFamily: "'Outfit', sans-serif",
         fontSize: "11px",
         fontStyle: "bold",
         color: isLocal ? "#00f0ff" : "#f1f5f9",
       }).setOrigin(0.5);
 
-      // Mini Health Bar mengambang di atas badan pesawat
+      // Mini Health Bar mengambang LEBIH TINGGI di atas badan pesawat agar jelas terlihat
       const hpBarGfx = this.add.graphics();
       this.renderShipHpBar(hpBarGfx, player.hp || 5, 5);
 
       // Ikon Nyawa Hati
       const hpHearts = "❤️".repeat(Math.max(0, player.hp || 5)) + "🖤".repeat(Math.max(0, 5 - (player.hp || 5)));
-      const hpText = this.add.text(0, -6, hpHearts, {
+      const hpText = this.add.text(0, -10, hpHearts, {
         fontSize: "8px"
       }).setOrigin(0.5);
 
       // Skor kecil
-      const scoreText = this.add.text(0, 28, "0", {
+      const scoreText = this.add.text(0, 30, "0", {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "10px",
         color: "#ffd700",
@@ -1011,54 +1011,148 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createExplosionEffect(x: number, y: number, isBig: boolean = false) {
-    // 1. Shockwave Ring Meledak Meluas
-    const shockwave = this.add.graphics().setDepth(36);
-    shockwave.lineStyle(isBig ? 4 : 2.5, 0xff7700, 1);
-    shockwave.strokeCircle(x, y, isBig ? 18 : 12);
-    this.tweens.add({
-      targets: shockwave,
-      scaleX: isBig ? 3.5 : 2.5,
-      scaleY: isBig ? 3.5 : 2.5,
-      alpha: 0,
-      duration: isBig ? 450 : 320,
-      ease: "Cubic.easeOut",
-      onComplete: () => shockwave.destroy(),
-    });
+    // 1. Screen Shake Haptic Punch
+    this.cameras.main.shake(isBig ? 240 : 150, isBig ? 0.015 : 0.008);
 
-    // 2. Bola Api Inti (Fireball Core)
-    const core = this.add.graphics().setDepth(37);
-    core.fillStyle(0xffff44, 1);
-    core.fillCircle(x, y, isBig ? 24 : 15);
-    core.fillStyle(0xff3300, 0.9);
-    core.fillCircle(x, y, isBig ? 34 : 22);
+    // 2. Kilatan Cahaya Putih Inti Meledak (Instant Blinding Flash)
+    const flash = this.add.graphics().setDepth(45);
+    flash.fillStyle(0xffffff, 1);
+    flash.fillCircle(x, y, isBig ? 32 : 20);
     this.tweens.add({
-      targets: core,
-      scaleX: 1.8,
-      scaleY: 1.8,
+      targets: flash,
+      scaleX: 1.6,
+      scaleY: 1.6,
       alpha: 0,
-      duration: isBig ? 400 : 280,
+      duration: 120,
       ease: "Quad.easeOut",
-      onComplete: () => core.destroy(),
+      onComplete: () => flash.destroy(),
     });
 
-    // 3. Percikan Api Serpihan (Flying Spark Particles)
-    const sparkCount = isBig ? 12 : 8;
+    // 3. Shockwave Rings (Cincin Gelombang Kejut Api & Neon Meledak)
+    const shockwave1 = this.add.graphics().setDepth(44);
+    shockwave1.lineStyle(isBig ? 4 : 2.5, 0xff7700, 1);
+    shockwave1.strokeCircle(x, y, isBig ? 20 : 14);
+    this.tweens.add({
+      targets: shockwave1,
+      scaleX: isBig ? 4.0 : 3.0,
+      scaleY: isBig ? 4.0 : 3.0,
+      alpha: 0,
+      duration: isBig ? 450 : 340,
+      ease: "Cubic.easeOut",
+      onComplete: () => shockwave1.destroy(),
+    });
+
+    const shockwave2 = this.add.graphics().setDepth(44);
+    shockwave2.lineStyle(isBig ? 2.5 : 1.5, 0x00f0ff, 0.85);
+    shockwave2.strokeCircle(x, y, isBig ? 12 : 8);
+    this.tweens.add({
+      targets: shockwave2,
+      scaleX: isBig ? 3.2 : 2.2,
+      scaleY: isBig ? 3.2 : 2.2,
+      alpha: 0,
+      duration: isBig ? 380 : 280,
+      ease: "Quad.easeOut",
+      onComplete: () => shockwave2.destroy(),
+    });
+
+    // 4. Multi-stage Fireball Clusters (Bola Api Bergumpal Meletup Bertahap)
+    const clusterOffsets = [
+      { dx: 0, dy: 0, r: isBig ? 28 : 18, color: 0xff3300, delay: 0 },
+      { dx: -10, dy: -6, r: isBig ? 22 : 14, color: 0xf59e0b, delay: 40 },
+      { dx: 8, dy: 8, r: isBig ? 20 : 13, color: 0xef4444, delay: 70 },
+      { dx: 6, dy: -8, r: isBig ? 18 : 11, color: 0xffd700, delay: 100 },
+    ];
+
+    clusterOffsets.forEach((cl) => {
+      this.time.delayedCall(cl.delay, () => {
+        const ball = this.add.graphics().setDepth(43);
+        ball.fillStyle(cl.color, 0.95);
+        ball.fillCircle(x + cl.dx, y + cl.dy, cl.r);
+        ball.fillStyle(0xffffff, 0.85);
+        ball.fillCircle(x + cl.dx, y + cl.dy, cl.r * 0.45);
+
+        this.tweens.add({
+          targets: ball,
+          scaleX: 1.7,
+          scaleY: 1.7,
+          alpha: 0,
+          duration: isBig ? 360 : 260,
+          ease: "Quad.easeOut",
+          onComplete: () => ball.destroy(),
+        });
+      });
+    });
+
+    // 5. Pecahan Logam Rangka Pesawat yang Terlempar Berputar (Shrapnel)
+    const shrapnelCount = isBig ? 14 : 9;
+    const shrapnelColors = [0xf87171, 0xfbbf24, 0x94a3b8, 0xef4444, 0xffffff];
+
+    for (let i = 0; i < shrapnelCount; i++) {
+      const shrapnel = this.add.graphics().setDepth(46);
+      const col = shrapnelColors[i % shrapnelColors.length];
+      shrapnel.fillStyle(col, 1);
+
+      // Bentuk segitiga pecahan logam tajam
+      const sz = 4 + Math.random() * 5;
+      shrapnel.fillTriangle(-sz, sz, sz, sz, 0, -sz * 1.5);
+      shrapnel.x = x;
+      shrapnel.y = y;
+
+      const angle = (i / shrapnelCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+      const speed = (isBig ? 65 : 45) + Math.random() * (isBig ? 80 : 55);
+
+      this.tweens.add({
+        targets: shrapnel,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        angle: (Math.random() - 0.5) * 720,
+        alpha: 0,
+        scale: 0.3,
+        duration: 380 + Math.random() * 220,
+        ease: "Cubic.easeOut",
+        onComplete: () => shrapnel.destroy(),
+      });
+    }
+
+    // 6. Asap Hitam Kelabu Sisa Ledakan
+    const smokeCount = isBig ? 6 : 4;
+    for (let s = 0; s < smokeCount; s++) {
+      const smoke = this.add.graphics().setDepth(42);
+      smoke.fillStyle(0x1e293b, 0.7);
+      smoke.fillCircle(0, 0, 10 + Math.random() * 8);
+      smoke.x = x + (Math.random() - 0.5) * 16;
+      smoke.y = y + (Math.random() - 0.5) * 16;
+
+      this.tweens.add({
+        targets: smoke,
+        y: smoke.y - (20 + Math.random() * 25),
+        scaleX: 2.2,
+        scaleY: 2.2,
+        alpha: 0,
+        duration: 500 + Math.random() * 250,
+        ease: "Quad.easeOut",
+        onComplete: () => smoke.destroy(),
+      });
+    }
+
+    // 7. Percikan Bunga Api Menyala (Sparks)
+    const sparkCount = isBig ? 16 : 10;
     for (let i = 0; i < sparkCount; i++) {
-      const spark = this.add.graphics().setDepth(38);
-      spark.fillStyle(Math.random() < 0.5 ? 0xffd700 : 0xff3300, 1);
-      spark.fillCircle(0, 0, Math.random() < 0.5 ? 3 : 2);
+      const spark = this.add.graphics().setDepth(47);
+      spark.fillStyle(Math.random() < 0.6 ? 0xffd700 : 0xff3300, 1);
+      spark.fillCircle(0, 0, Math.random() < 0.5 ? 2.5 : 1.8);
       spark.x = x;
       spark.y = y;
 
-      const angle = (i / sparkCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      const dist = (isBig ? 48 : 28) + Math.random() * (isBig ? 35 : 18);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = (isBig ? 55 : 35) + Math.random() * (isBig ? 45 : 30);
 
       this.tweens.add({
         targets: spark,
         x: x + Math.cos(angle) * dist,
         y: y + Math.sin(angle) * dist,
         alpha: 0,
-        duration: 350 + Math.random() * 150,
+        duration: 320 + Math.random() * 180,
         ease: "Cubic.easeOut",
         onComplete: () => spark.destroy(),
       });
@@ -1126,9 +1220,9 @@ export class GameScene extends Phaser.Scene {
       this.starGraphics.clear();
       this.stars.forEach((star) => {
         star.y += star.speed * dtSec;
-        if (star.y > 600) {
+        if (star.y > 960) {
           star.y = 0;
-          star.x = Math.random() * 800;
+          star.x = Math.random() * 600;
         }
         this.starGraphics.fillStyle(0xffffff, star.alpha);
         this.starGraphics.fillRect(star.x, star.y, star.size, star.size);
@@ -1264,7 +1358,7 @@ export class GameScene extends Phaser.Scene {
 
     const clampedHp = Math.max(0, Math.min(maxHp, hp));
     const ratio = clampedHp / maxHp;
-    const barWidth = Math.round(112 * ratio);
+    const barWidth = Math.round(90 * ratio);
 
     let fillColor = 0x10b981; // Hijau (5/5)
     if (clampedHp === 4) fillColor = 0x34d399; // Emerald (4/5)
@@ -1274,7 +1368,7 @@ export class GameScene extends Phaser.Scene {
 
     if (barWidth > 0) {
       this.myHpBarFill.fillStyle(fillColor, 0.92);
-      this.myHpBarFill.fillRoundedRect(192, 28 + 2, barWidth, 12, 3);
+      this.myHpBarFill.fillRoundedRect(167, 28 + 2, barWidth, 12, 3);
     }
 
     if (this.myHpText) {
@@ -1288,18 +1382,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Render Mini Health Bar mengambang di atas masing-masing pesawat
+   * Render Mini Health Bar mengambang LEBIH TINGGI di atas masing-masing pesawat
+   * Diposisikan di y = -24 dengan frame kontras tinggi agar terlihat jelas di smartphone
    */
   private renderShipHpBar(gfx: Phaser.GameObjects.Graphics, hp: number, maxHp: number = 5) {
     gfx.clear();
     const clampedHp = Math.max(0, Math.min(maxHp, hp));
     const ratio = clampedHp / maxHp;
 
-    // Slot gelap
-    gfx.fillStyle(0x0f172a, 0.9);
-    gfx.fillRoundedRect(-18, -14, 36, 4, 1.5);
-    gfx.lineStyle(0.8, 0x334155, 0.8);
-    gfx.strokeRoundedRect(-18, -14, 36, 4, 1.5);
+    const barW = 44;
+    const barH = 6;
+    const barX = -barW / 2;
+    const barY = -25; // Sedikit ke atas lagi di area pesawat agar tidak terhalang hidung & kokpit pesawat
+
+    // Background slot gelap dengan border cyan bercahaya
+    gfx.fillStyle(0x020617, 0.95);
+    gfx.fillRoundedRect(barX, barY, barW, barH, 2);
+    gfx.lineStyle(1, 0x00f0ff, 0.75);
+    gfx.strokeRoundedRect(barX, barY, barW, barH, 2);
 
     // Isi bar
     let fillColor = 0x10b981;
@@ -1308,10 +1408,10 @@ export class GameScene extends Phaser.Scene {
     else if (clampedHp === 2) fillColor = 0xf97316;
     else if (clampedHp <= 1) fillColor = 0xef4444;
 
-    const fillWidth = Math.max(0, Math.round(34 * ratio));
+    const fillWidth = Math.max(0, Math.round((barW - 2) * ratio));
     if (fillWidth > 0) {
       gfx.fillStyle(fillColor, 1);
-      gfx.fillRoundedRect(-17, -13, fillWidth, 2, 1);
+      gfx.fillRoundedRect(barX + 1, barY + 1, fillWidth, barH - 2, 1.5);
     }
   }
 }

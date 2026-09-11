@@ -272,6 +272,21 @@ class SoundManager {
 
     osc.start(now);
     osc.stop(now + duration);
+
+    // 3. Metallic Shatter / Hull Crunch
+    try {
+      const crunchOsc = this.ctx.createOscillator();
+      const crunchGain = this.ctx.createGain();
+      crunchOsc.type = "square";
+      crunchOsc.frequency.setValueAtTime(isBig ? 460 : 380, now);
+      crunchOsc.frequency.exponentialRampToValueAtTime(45, now + 0.18);
+      crunchGain.gain.setValueAtTime(isBig ? 0.28 : 0.22, now);
+      crunchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      crunchOsc.connect(crunchGain);
+      crunchGain.connect(this.ctx.destination);
+      crunchOsc.start(now);
+      crunchOsc.stop(now + 0.18);
+    } catch (e) {}
   }
 
   playCoin(value: number) {

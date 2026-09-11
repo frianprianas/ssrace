@@ -13,9 +13,9 @@ export class Player extends Schema {
   @type("string") id: string = "";
   @type("string") name: string = "";
   @type("string") email: string = "";
-  @type("number") x: number = 400;
-  @type("number") y: number = 510; // Zona pertahanan bawah
-  @type("number") stepY: number = 2; // Posisi Netral: 2. Range 0 (Mundur 2 langkah: 580) s/d 4 (Maju 2 langkah: 440)
+  @type("number") x: number = 300;
+  @type("number") y: number = 820; // Zona pertahanan bawah
+  @type("number") stepY: number = 2; // Posisi Netral: 2. Range 0 (Mundur 2 langkah: 900) s/d 4 (Maju 2 langkah: 740)
   @type("number") score: number = 0;
   @type("number") cumulativeScore: number = 0; // Akumulasi total skor dari database
   @type("number") hp: number = 5; // Nyawa pemain (Maks 5x tembakan)

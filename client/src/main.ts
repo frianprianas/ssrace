@@ -9,8 +9,8 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 800,
-    height: 600
+    width: 600,
+    height: 960
   },
   physics: {
     default: "arcade",
@@ -398,8 +398,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const scene = getScene();
     if (!scene) return;
 
-    // 1. Kemudi Horizontal (Kiri / Kanan) dengan deadzone halus
-    const deadzoneX = 10;
+    // 1. Kemudi Horizontal (Kiri / Kanan) dengan deadzone nyaman (tidak terlalu sensitif)
+    const deadzoneX = 22;
     if (dx < -deadzoneX) {
       scene.touchInput.left = true;
       scene.touchInput.right = false;
@@ -411,8 +411,8 @@ window.addEventListener("DOMContentLoaded", () => {
       scene.touchInput.right = false;
     }
 
-    // 2. Kemudi Vertikal (Maju / Mundur 2 langkah) dengan step lock
-    const stepThreshold = 18;
+    // 2. Kemudi Vertikal (Maju / Mundur 2 langkah) dengan threshold terukur
+    const stepThreshold = 32;
     if (dy < -stepThreshold) {
       if (!stepUpTriggered) {
         scene.touchInput.up = true;
