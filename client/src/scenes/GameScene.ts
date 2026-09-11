@@ -36,7 +36,6 @@ interface EnemyData {
   container: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Sprite;
   exhaust: Phaser.GameObjects.Sprite;
-  labelText: Phaser.GameObjects.Text;
   targetX: number;
   targetY: number;
 }
@@ -52,6 +51,15 @@ export class GameScene extends Phaser.Scene {
   private bullets: Map<string, BulletData> = new Map();
   private coins: Map<string, CoinData> = new Map();
   private enemies: Map<string, EnemyData> = new Map();
+
+  // Kapal Induk Alien Planet TaYa (Boss)
+  private bossContainer?: Phaser.GameObjects.Container;
+  private bossSprite?: Phaser.GameObjects.Sprite;
+  private bossCoreGlow?: Phaser.GameObjects.Graphics;
+  private bossHudContainer?: Phaser.GameObjects.Container;
+  private bossHpFill?: Phaser.GameObjects.Graphics;
+  private bossHpText?: Phaser.GameObjects.Text;
+  private bossNameBadge?: Phaser.GameObjects.Text;
 
   // Background stars
   private stars: { x: number; y: number; speed: number; size: number; alpha: number }[] = [];
@@ -154,8 +162,9 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 4. Setup UI HUD
+    // 4. Setup UI HUD & Boss Bar
     this.createHUD();
+    this.createBossHUD();
 
     // 5. Setup Modals
     this.createFinishedModal();
@@ -283,35 +292,90 @@ export class GameScene extends Phaser.Scene {
       gE.generateTexture(`enemy_spaceship_${idx}`, 40, 40);
     });
 
-    // 6. Koin 25 - Uang Lembur (Oranye / Tembaga Berkilau)
+    // 6. Inti Energi Kosmik 25 - Plasma Core (Cyan / Neon Blue Berkilau)
     const gCoin25 = this.make.graphics({ x: 0, y: 0 });
-    gCoin25.fillStyle(0xf59e0b, 1);
+    gCoin25.fillStyle(0x00f0ff, 0.9);
     gCoin25.fillCircle(14, 14, 13);
-    gCoin25.lineStyle(2, 0xffedd5, 1);
+    gCoin25.lineStyle(2, 0xe0f2fe, 1);
     gCoin25.strokeCircle(14, 14, 13);
-    gCoin25.lineStyle(1.5, 0xd97706, 0.8);
+    gCoin25.lineStyle(1.5, 0x0284c7, 0.85);
     gCoin25.strokeCircle(14, 14, 8);
+    gCoin25.fillStyle(0xffffff, 0.9);
+    gCoin25.fillCircle(14, 14, 4);
     gCoin25.generateTexture("coin_25", 28, 28);
 
-    // 7. Koin 50 - Tunjangan (Cyan / Perak)
+    // 7. Inti Energi Kosmik 50 - Photon Core (Ungu / Magenta Berenergi)
     const gCoin50 = this.make.graphics({ x: 0, y: 0 });
-    gCoin50.fillStyle(0x06b6d4, 1);
+    gCoin50.fillStyle(0xd946ef, 0.95);
     gCoin50.fillCircle(16, 16, 15);
-    gCoin50.lineStyle(2.5, 0xe0f2fe, 1);
+    gCoin50.lineStyle(2.5, 0xfae8ff, 1);
     gCoin50.strokeCircle(16, 16, 15);
-    gCoin50.lineStyle(1.5, 0x0891b2, 0.8);
+    gCoin50.lineStyle(1.5, 0xa21caf, 0.85);
     gCoin50.strokeCircle(16, 16, 9);
+    gCoin50.fillStyle(0xffffff, 0.9);
+    gCoin50.fillCircle(16, 16, 5);
     gCoin50.generateTexture("coin_50", 32, 32);
 
-    // 8. Koin 100 - Bonus KPI (Bintang Emas Bersinar)
+    // 8. Inti Energi Kosmik 100 - Quantum Core (Emas Supernova Bersinar)
     const gCoin100 = this.make.graphics({ x: 0, y: 0 });
     gCoin100.fillStyle(0xeab308, 1);
     gCoin100.fillCircle(18, 18, 17);
     gCoin100.lineStyle(3, 0xfef08a, 1);
     gCoin100.strokeCircle(18, 18, 17);
-    gCoin100.fillStyle(0xfef08a, 0.85);
-    gCoin100.fillCircle(18, 18, 7);
+    gCoin100.fillStyle(0xfef08a, 0.9);
+    gCoin100.fillCircle(18, 18, 8);
+    gCoin100.fillStyle(0xffffff, 1);
+    gCoin100.fillCircle(18, 18, 4);
     gCoin100.generateTexture("coin_100", 36, 36);
+
+    // 9. Kapal Induk Alien Planet TaYa (Dreadnought Mothership Boss 160x80)
+    const gBoss = this.make.graphics({ x: 0, y: 0 });
+
+    // Sayap Luar Dreadnought (Obsidian Titanium Armor Plating)
+    gBoss.fillStyle(0x1e1b4b, 1);
+    gBoss.fillTriangle(80, 75, 0, 15, 30, 0);
+    gBoss.fillTriangle(80, 75, 130, 0, 160, 15);
+
+    // Armor Lapis Dalam (Deep Crimson / Void Purple)
+    gBoss.fillStyle(0x4c0519, 1);
+    gBoss.fillTriangle(80, 70, 20, 18, 50, 8);
+    gBoss.fillTriangle(80, 70, 110, 8, 140, 18);
+
+    // Rangka Bodi Pusat
+    gBoss.fillStyle(0x0f172a, 1);
+    gBoss.fillRoundedRect(55, 10, 50, 55, 6);
+
+    // Garis Energi / Neon Runes (Alien Conduit Glowing Lines)
+    gBoss.lineStyle(2, 0xd946ef, 0.9);
+    gBoss.lineBetween(80, 12, 80, 68);
+    gBoss.lineBetween(35, 18, 65, 45);
+    gBoss.lineBetween(125, 18, 95, 45);
+
+    // Pintu Hanggar & Meriam Sayap Kiri dan Kanan
+    gBoss.fillStyle(0xef4444, 1);
+    gBoss.fillRect(20, 25, 6, 12);
+    gBoss.fillRect(134, 25, 6, 12);
+
+    // Moncong Meriam Utama Inti Plasma (Tengah Bawah)
+    gBoss.fillStyle(0xffffff, 1);
+    gBoss.fillRect(77, 66, 6, 10);
+    gBoss.lineStyle(1.5, 0xff0055, 1);
+    gBoss.strokeRect(76, 65, 8, 11);
+
+    // Inti Reaktor Alien (Pulsing Plasma Core)
+    gBoss.fillStyle(0xff0055, 1);
+    gBoss.fillCircle(80, 38, 11);
+    gBoss.fillStyle(0xfef08a, 1);
+    gBoss.fillCircle(80, 38, 6);
+    gBoss.fillStyle(0xffffff, 1);
+    gBoss.fillCircle(80, 38, 3);
+
+    // Pendorong Ion Ganda (Thruster Nozzles Atas)
+    gBoss.fillStyle(0x00f0ff, 0.85);
+    gBoss.fillRoundedRect(60, 2, 12, 8, 2);
+    gBoss.fillRoundedRect(88, 2, 12, 8, 2);
+
+    gBoss.generateTexture("mothership_boss", 160, 80);
   }
 
   private createHUD() {
@@ -502,6 +566,90 @@ export class GameScene extends Phaser.Scene {
     this.eliminatedModal.add(hitZone);
   }
 
+  private createBossHUD() {
+    this.bossHudContainer = this.add.container(300, 78).setDepth(110).setVisible(false);
+
+    // Background Bar Kaca Gelap Merah/Ungu
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0512, 0.92);
+    bg.fillRoundedRect(-170, -18, 340, 36, 6);
+    bg.lineStyle(1.5, 0xd946ef, 0.7);
+    bg.strokeRoundedRect(-170, -18, 340, 36, 6);
+
+    // Badge Nama Boss
+    this.bossNameBadge = this.add.text(-160, -9, "👾 KAPAL INDUK PLANET TAYA", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "10.5px",
+      fontStyle: "bold",
+      color: "#f43f5e"
+    }).setOrigin(0, 0.5);
+
+    // HP Value text
+    this.bossHpText = this.add.text(160, -9, "75/75 (100%)", {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "9.5px",
+      fontStyle: "bold",
+      color: "#fca5a5"
+    }).setOrigin(1, 0.5);
+
+    // Slot bar kesehatan
+    const barSlot = this.add.graphics();
+    barSlot.fillStyle(0x1e1b4b, 0.95);
+    barSlot.fillRoundedRect(-160, 4, 320, 10, 3);
+    barSlot.lineStyle(1, 0x475569, 0.7);
+    barSlot.strokeRoundedRect(-160, 4, 320, 10, 3);
+
+    // Fill bar
+    this.bossHpFill = this.add.graphics();
+
+    this.bossHudContainer.add([bg, barSlot, this.bossHpFill, this.bossNameBadge, this.bossHpText]);
+  }
+
+  private updateBossHUD(hp: number, maxHp: number = 75) {
+    if (!this.bossHpFill || !this.bossHpText) return;
+    this.bossHpFill.clear();
+
+    const clamped = Math.max(0, Math.min(maxHp, hp));
+    const ratio = clamped / maxHp;
+    const barWidth = Math.round(318 * ratio);
+
+    let color = 0xef4444;
+    if (ratio > 0.6) color = 0xd946ef;
+    else if (ratio > 0.3) color = 0xf59e0b;
+
+    if (barWidth > 0) {
+      this.bossHpFill.fillStyle(color, 1);
+      this.bossHpFill.fillRoundedRect(-159, 5, barWidth, 8, 2);
+    }
+
+    const pct = Math.round(ratio * 100);
+    this.bossHpText.setText(`${clamped}/${maxHp} (${pct}%)`);
+  }
+
+  private getOrCreateBossContainer(): Phaser.GameObjects.Container {
+    if (!this.bossContainer) {
+      this.bossContainer = this.add.container(this.room?.state?.bossX || 300, this.room?.state?.bossY || -200).setDepth(28);
+
+      // Core glow aura
+      this.bossCoreGlow = this.add.graphics();
+      this.bossCoreGlow.fillStyle(0xff0055, 0.35);
+      this.bossCoreGlow.fillCircle(0, 0, 34);
+
+      this.bossSprite = this.add.sprite(0, 0, "mothership_boss");
+
+      // Floating mini tag
+      const bossMiniLabel = this.add.text(0, -48, "☠️ MOTHERSHIP TAYA ☠️", {
+        fontFamily: "'Outfit', sans-serif",
+        fontSize: "10.5px",
+        fontStyle: "bold",
+        color: "#f43f5e"
+      }).setOrigin(0.5);
+
+      this.bossContainer.add([this.bossCoreGlow, this.bossSprite, bossMiniLabel]);
+    }
+    return this.bossContainer;
+  }
+
   public cleanupEntities() {
     this.players.forEach((p) => {
       try { p.container.destroy(); } catch (e) {}
@@ -519,6 +667,14 @@ export class GameScene extends Phaser.Scene {
       try { e.container.destroy(); } catch (e) {}
     });
     this.enemies.clear();
+
+    if (this.bossContainer) {
+      try { this.bossContainer.destroy(); } catch (e) {}
+      this.bossContainer = undefined;
+    }
+    if (this.bossHudContainer) {
+      this.bossHudContainer.setVisible(false);
+    }
   }
 
   async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string; roomNumber?: number }) {
@@ -808,7 +964,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 4. Sinkronisasi Pesawat Tempur Musuh
+    // 4. Sinkronisasi Pesawat Tempur Alien (Tanpa Label Nama)
     this.room.state.enemies.onAdd((enemy: any) => {
       const container = this.add.container(enemy.x, enemy.y).setDepth(25);
       const textureKey = `enemy_spaceship_${enemy.enemyType || 0}`;
@@ -817,20 +973,13 @@ export class GameScene extends Phaser.Scene {
       const exhaust = this.add.sprite(0, -18, "enemy_exhaust_flame");
       const sprite = this.add.sprite(0, 0, textureKey);
 
-      const labelText = this.add.text(0, 26, enemy.name, {
-        fontFamily: "'Outfit', sans-serif",
-        fontSize: "10px",
-        fontStyle: "bold",
-        color: "#f87171",
-      }).setOrigin(0.5);
-
-      container.add([exhaust, sprite, labelText]);
+      // Pesawat musuh tidak dinamai
+      container.add([exhaust, sprite]);
 
       const enemyData: EnemyData = {
         container,
         sprite,
         exhaust,
-        labelText,
         targetX: enemy.x,
         targetY: enemy.y,
       };
@@ -857,22 +1006,34 @@ export class GameScene extends Phaser.Scene {
       const totalPlayers = this.room.state.players.size;
 
       if (status === "waiting") {
-        this.statusBadge.setText(`MENUNGGU PEMAIN (${totalPlayers}/5 - Min 2)`);
+        this.statusBadge.setText(`MENUNGGU PILOT (${totalPlayers}/5 - Min 2)`);
         this.statusBadge.setColor("#38bdf8");
         this.timerText.setText("STANDBY");
         this.modalContainer.setVisible(false);
+        if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
         sounds.stopBgm();
       } else if (status === "playing") {
-        this.statusBadge.setText(`SURVIVAL AKTIF (${totalPlayers}/5)`);
+        this.statusBadge.setText(`MISI AKTIF (${totalPlayers}/5)`);
         this.statusBadge.setColor("#10b981");
         this.timerText.setText(`WAKTU: ${this.room.state.countdown}s`);
         this.modalContainer.setVisible(false);
         sounds.startBgm();
+
+        // Sinkronisasi Bar Kapal Induk Alien
+        if (this.room.state.bossActive) {
+          if (this.bossHudContainer) {
+            this.bossHudContainer.setVisible(true);
+            this.updateBossHUD(this.room.state.bossHp, this.room.state.bossMaxHp || 75);
+          }
+        } else {
+          if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
+        }
       } else if (status === "finished") {
-        this.statusBadge.setText("SELESAI");
+        this.statusBadge.setText("MISI SELESAI");
         this.statusBadge.setColor("#ffd700");
-        this.modalWinner.setText(`Karyawan Teladan:\n⭐ ${this.room.state.winnerName} ⭐\nSkor Akhir: ${this.room.state.winnerScore}`);
+        this.modalWinner.setText(`Pahlawan Pertahanan Bumi:\n⭐ ${this.room.state.winnerName} ⭐\nSkor Akhir: ${this.room.state.winnerScore}`);
         this.modalContainer.setVisible(true);
+        if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
         sounds.stopBgm();
       }
 
@@ -885,7 +1046,7 @@ export class GameScene extends Phaser.Scene {
         data.x, 
         data.y, 
         `+${data.value} ${data.label}! (${data.playerName})`, 
-        data.value === 100 ? "#facc15" : (data.value === 50 ? "#06b6d4" : "#f59e0b")
+        data.value === 100 ? "#facc15" : (data.value === 50 ? "#d946ef" : "#00f0ff")
       );
 
       if (data.playerId === this.room.sessionId) {
@@ -895,7 +1056,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("enemy_destroyed", (data: any) => {
-      this.spawnFloatingText(data.x, data.y, `💥 +${data.points} HANCURKAN ${data.enemyName}!`, "#34d399");
+      this.spawnFloatingText(data.x, data.y, `💥 +${data.points} ALIEN HANCUR!`, "#34d399");
       this.createExplosionEffect(data.x, data.y, false);
       sounds.playExplosion(false);
       this.updateLeaderboard();
@@ -907,9 +1068,59 @@ export class GameScene extends Phaser.Scene {
 
     this.room.onMessage("fast_enemy_incoming", (data: any) => {
       // Peringatan radar musuh kilat meluncur cepat dari atas
-      this.spawnFloatingText(data.x, 80, `⚠️ AWAS MUSUH KILAT!\n${data.name}`, "#f43f5e");
+      this.spawnFloatingText(data.x, 85, "⚠️ AWAS ALIEN KILAT!", "#f43f5e");
       sounds.playEnemyLaser();
       this.cameras.main.shake(120, 0.007);
+    });
+
+    // Event Kapal Induk Alien Planet TaYa (Boss)
+    this.room.onMessage("boss_spawned", (data: any) => {
+      this.cameras.main.shake(600, 0.025);
+      this.cameras.main.flash(350, 255, 0, 80);
+      sounds.playExplosion(true);
+      sounds.playEnemyLaser();
+      this.spawnFloatingText(300, 180, "🚨 AWAS! KAPAL INDUK PLANET TAYA MEMASUKI ORBIT! 🚨", "#f43f5e");
+      if (this.bossHudContainer) {
+        this.bossHudContainer.setVisible(true);
+        this.updateBossHUD(data.hp, data.maxHp);
+      }
+    });
+
+    this.room.onMessage("boss_damaged", (data: any) => {
+      this.updateBossHUD(data.hp, data.maxHp);
+      this.createPhysicsBumpEffect(data.x, data.y, (Math.random() - 0.5) * 2, -1);
+      sounds.playEnemyLaser();
+      if (this.bossSprite) {
+        this.bossSprite.setTint(0xffffff);
+        this.time.delayedCall(70, () => {
+          if (this.bossSprite) this.bossSprite.clearTint();
+        });
+      }
+    });
+
+    this.room.onMessage("boss_defeated", (data: any) => {
+      this.cameras.main.shake(800, 0.04);
+      this.cameras.main.flash(500, 255, 255, 255);
+      sounds.playExplosion(true);
+
+      // Multi-explosion supernova chain
+      for (let i = 0; i < 8; i++) {
+        this.time.delayedCall(i * 130, () => {
+          const offsetX = (Math.random() - 0.5) * 120;
+          const offsetY = (Math.random() - 0.5) * 60;
+          this.createExplosionEffect(data.x + offsetX, data.y + offsetY, true);
+          sounds.playExplosion(true);
+        });
+      }
+
+      this.spawnFloatingText(300, 210, `🎉 KAPAL INDUK ALIEN HANCUR!\nPenghancur: ${data.killerName} (+600 Pts)`, "#facc15");
+      if (this.bossContainer) this.bossContainer.setVisible(false);
+      if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
+      this.updateLeaderboard();
+    });
+
+    this.room.onMessage("boss_shoot", () => {
+      sounds.playEnemyLaser();
     });
 
     this.room.onMessage("player_damaged", (data: any) => {
@@ -919,7 +1130,7 @@ export class GameScene extends Phaser.Scene {
       if (data.lifeLost) {
         this.spawnFloatingText(data.x, data.y, `💔 1 NYAWA HILANG! (Sisa: ${data.livesRemaining}/3 Nyawa)`, "#f43f5e");
       } else {
-        this.spawnFloatingText(data.x, data.y, `💥 -1 DARAH! (Sisa: ${data.hpRemaining}/5)`, "#ef4444");
+        this.spawnFloatingText(data.x, data.y, `💥 -1 PERISAI! (Sisa: ${data.hpRemaining}/5)`, "#ef4444");
       }
 
       if (data.playerId === this.room.sessionId) {
@@ -960,9 +1171,9 @@ export class GameScene extends Phaser.Scene {
 
       this.elimReasonText.setText(data.message || "Seluruh 3 Nyawa Pesawat Anda telah habis!");
       this.elimScoreText.setText(
-        `Skor Pertandingan Ini: ${data.matchScore} Poin\n` +
-        `Total Akumulasi Kantor: ${data.totalScore} Poin\n` +
-        `Skor Terbaik: ${data.highestScore} | Game Dimainkan: ${data.gamesPlayed}`
+        `Skor Misi Ini: ${data.matchScore} Poin\n` +
+        `Total Akumulasi Poin: ${data.totalScore} Poin\n` +
+        `Skor Terbaik: ${data.highestScore} | Misi Dimainkan: ${data.gamesPlayed}`
       );
       this.eliminatedModal.setVisible(true);
       sounds.stopBgm();
@@ -1294,13 +1505,13 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 4. Interpolasi Posisi Peluru
+    // 4. Interpolasi Posisi Peluru (Termasuk tembakan menyebar / diagonal)
     this.bullets.forEach((b) => {
-      b.sprite.x = b.targetX;
+      b.sprite.x = Phaser.Math.Linear(b.sprite.x, b.targetX, 0.55);
       b.sprite.y = Phaser.Math.Linear(b.sprite.y, b.targetY, 0.55);
     });
 
-    // 5. Interpolasi Posisi Koin
+    // 5. Interpolasi Posisi Koin Inti Energi
     this.coins.forEach((c) => {
       c.container.x = Phaser.Math.Linear(c.container.x, c.targetX, 0.25);
       c.container.y = Phaser.Math.Linear(c.container.y, c.targetY, 0.25);
@@ -1312,6 +1523,32 @@ export class GameScene extends Phaser.Scene {
       e.container.y = Phaser.Math.Linear(e.container.y, e.targetY, 0.3);
       e.exhaust.scaleY = 0.8 + Math.random() * 0.4;
     });
+
+    // 7. Interpolasi Posisi Kapal Induk Alien Planet TaYa (Boss)
+    if (this.room && this.room.state && this.room.state.bossActive) {
+      const bContainer = this.getOrCreateBossContainer();
+      bContainer.setVisible(true);
+      bContainer.x = Phaser.Math.Linear(bContainer.x, this.room.state.bossX, 0.25);
+      bContainer.y = Phaser.Math.Linear(bContainer.y, this.room.state.bossY, 0.25);
+
+      if (this.bossCoreGlow) {
+        this.bossCoreGlow.alpha = 0.35 + Math.sin(time * 0.008) * 0.25;
+        const scaleVal = 1.0 + Math.sin(time * 0.005) * 0.2;
+        this.bossCoreGlow.setScale(scaleVal);
+      }
+
+      if (this.bossHudContainer) {
+        this.bossHudContainer.setVisible(true);
+        this.updateBossHUD(this.room.state.bossHp, this.room.state.bossMaxHp || 75);
+      }
+    } else {
+      if (this.bossContainer) {
+        this.bossContainer.setVisible(false);
+      }
+      if (this.bossHudContainer) {
+        this.bossHudContainer.setVisible(false);
+      }
+    }
   }
 
   /**

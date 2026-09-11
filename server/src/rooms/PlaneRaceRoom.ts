@@ -24,20 +24,25 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private fastEnemyTimer: number = 0;
   private fastEnemyIndex: number = 0;
   private fastEnemyNames = [
-    "⚡ Interceptor Kilat",
-    "🔥 Pemecatan Massal",
-    "⚡ SPJ Dadakan",
-    "🚀 Deadline Kilat"
+    "",
+    "",
+    "",
+    ""
   ];
 
-  // Profil Pesawat Tempur Musuh
+  // Profil Pesawat Tempur Alien Planet TaYa (Tanpa Label Nama Sesuai Permintaan)
   private enemyTemplates = [
-    { name: "Deadline Dadakan", speedY: 90, shootInterval: 2.2, type: 0 },
-    { name: "Revisi Jam 12 Malam", speedY: 105, shootInterval: 1.8, type: 1 },
-    { name: "Audit Pajak", speedY: 80, shootInterval: 2.5, type: 2 },
-    { name: "Micromanagement", speedY: 110, shootInterval: 2.0, type: 3 },
-    { name: "Meeting Tanpa Hasil", speedY: 95, shootInterval: 2.4, type: 4 }
+    { name: "", speedY: 90, shootInterval: 2.2, type: 0 },
+    { name: "", speedY: 105, shootInterval: 1.8, type: 1 },
+    { name: "", speedY: 80, shootInterval: 2.5, type: 2 },
+    { name: "", speedY: 110, shootInterval: 2.0, type: 3 },
+    { name: "", speedY: 95, shootInterval: 2.4, type: 4 }
   ];
+
+  // Mekanisme Kapal Induk Alien Planet TaYa (Boss Pertempuran Akhir)
+  private bossSpawned: boolean = false;
+  private bossDirection: number = 1;
+  private bossShootTimer: number = 0;
 
   async onAuth(client: Client, options: any): Promise<BaknusUser> {
     try {
@@ -93,7 +98,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   onJoin(client: Client, options?: any, auth?: any) {
-    const userName = auth?.name || (options && options.name) || "Karyawan Baknus";
+    const userName = auth?.name || (options && options.name) || "Pilot Pertahanan Bumi";
     const userEmail = auth?.email || "";
     console.log(`[Room] Player joined: ${client.sessionId} - ${userName} (${userEmail})`);
 
@@ -201,15 +206,15 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     const roll = Math.random();
     if (roll < 0.60) {
       coin.value = 25;
-      coin.label = "Uang Lembur";
+      coin.label = "Plasma Core";
       coin.radius = 13;
     } else if (roll < 0.90) {
       coin.value = 50;
-      coin.label = "Tunjangan";
+      coin.label = "Photon Core";
       coin.radius = 15;
     } else {
       coin.value = 100;
-      coin.label = "Bonus KPI";
+      coin.label = "Quantum Core";
       coin.radius = 18;
     }
   }
@@ -220,7 +225,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       const template = this.enemyTemplates[i];
       const enemy = new Enemy();
       enemy.id = `enemy_${i}`;
-      enemy.name = template.name;
+      enemy.name = "";
       enemy.radius = 24;
       enemy.enemyType = template.type;
       enemy.shootTimer = Math.random() * 1.5; // Stagger tembakan awal
@@ -231,7 +236,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     // Tambahkan 1 Pesawat Tempur Penyelam Kilat Khusus (Fast Diver Interceptor)
     const fastEnemy = new Enemy();
     fastEnemy.id = "enemy_fast_diver";
-    fastEnemy.name = "⚡ Interceptor Kilat";
+    fastEnemy.name = "";
     fastEnemy.radius = 24;
     fastEnemy.enemyType = 0;
     fastEnemy.x = 300;
@@ -246,10 +251,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     const fastEnemy = this.state.enemies.find(e => e.id === "enemy_fast_diver");
     if (!fastEnemy) return;
 
-    const name = this.fastEnemyNames[this.fastEnemyIndex % this.fastEnemyNames.length];
-    this.fastEnemyIndex++;
-
-    fastEnemy.name = name;
+    fastEnemy.name = "";
     fastEnemy.x = 60 + Math.random() * 480;
     fastEnemy.y = -70;
     fastEnemy.speedY = 380 + Math.random() * 70; // Meluncur sangat cepat (380 - 450 px/detik)
@@ -259,10 +261,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
     this.broadcast("fast_enemy_incoming", {
       x: fastEnemy.x,
-      name: fastEnemy.name
+      name: ""
     });
 
-    console.log(`[Room] ${fastEnemy.name} MELUNCUR KILAT di X=${Math.round(fastEnemy.x)}, SpeedY=${Math.round(fastEnemy.speedY)}`);
+    console.log(`[Room] Alien Penyelam Kilat MELUNCUR di X=${Math.round(fastEnemy.x)}, SpeedY=${Math.round(fastEnemy.speedY)}`);
   }
 
   private respawnEnemy(enemy: Enemy, customY?: number, baseSpeed: number = 95) {
@@ -285,6 +287,23 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         this.timerAccumulator -= 1.0;
         this.state.countdown = Math.max(0, this.state.countdown - 1);
 
+        // Kapal Induk Alien Planet TaYa muncul di akhir level (40 detik tersisa)
+        if (this.state.countdown <= 40 && !this.bossSpawned) {
+          this.bossSpawned = true;
+          this.state.bossActive = true;
+          this.state.bossHp = 75;
+          this.state.bossMaxHp = 75;
+          this.state.bossX = 300;
+          this.state.bossY = -120;
+          this.broadcast("boss_spawned", {
+            hp: this.state.bossHp,
+            maxHp: this.state.bossMaxHp,
+            x: this.state.bossX,
+            y: this.state.bossY
+          });
+          console.log("[Room] 🚨 KAPAL INDUK ALIEN PLANET TAYA MEMASUKI ARENA! HP: 75");
+        }
+
         if (this.state.countdown === 0) {
           this.endGame();
         }
@@ -300,6 +319,43 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       this.finishedTimer += dtSec;
       if (this.finishedTimer >= 10.0) {
         this.resetGame();
+      }
+    }
+
+    // Update Pergerakan & Serangan Kapal Induk Alien (Boss Akhir Level)
+    if (this.state.bossActive) {
+      if (this.state.bossY < 140) {
+        this.state.bossY += 60 * dtSec;
+      } else {
+        // Patroli horizontal alien mothership
+        this.state.bossX += this.bossDirection * 95 * dtSec;
+        if (this.state.bossX >= 470) {
+          this.state.bossX = 470;
+          this.bossDirection = -1;
+        } else if (this.state.bossX <= 130) {
+          this.state.bossX = 130;
+          this.bossDirection = 1;
+        }
+
+        // Salvo tembakan plasma kapal induk setiap 1.35 detik
+        if (this.state.status !== "finished") {
+          this.bossShootTimer += dtSec;
+          if (this.bossShootTimer >= 1.35) {
+            this.bossShootTimer = 0;
+            this.spawnBossBarrage();
+          }
+        }
+      }
+
+      // Tabrakan Fisik Kapal Induk Alien dengan Pesawat Pemain
+      if (this.state.status !== "finished") {
+        this.state.players.forEach((player, sessionId) => {
+          if (!player.isEliminated && player.invulnerableTimer <= 0) {
+            if (Math.abs(player.x - this.state.bossX) < 85 && Math.abs(player.y - this.state.bossY) < 55) {
+              this.damagePlayer(player, sessionId, "Tabrakan Kapal Induk Alien");
+            }
+          }
+        });
       }
     }
 
@@ -447,17 +503,18 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     });
 
-    // 5. Update Semua Peluru (Pemain & Musuh)
+    // 5. Update Semua Peluru (Pemain, Armada Alien, & Kapal Induk)
     for (let i = this.state.bullets.length - 1; i >= 0; i--) {
       const b = this.state.bullets[i];
       if (!b) continue;
 
       if (b.isEnemy) {
-        // Peluru musuh meluncur mantap ke bawah mencapai pemain (240 px/detik)
+        // Peluru musuh meluncur ke bawah dan menyebar diagonal sesuai speedX
         b.y += (b.speedY || 240) * dtSec;
+        b.x += (b.speedX || 0) * dtSec;
 
-        // Hapus HANYA jika lewat batas bawah layar (arena 960px, pemain ada di 740..900)
-        if (b.y > 1020) {
+        // Hapus jika lewat batas arena
+        if (b.y > 1020 || b.x < -40 || b.x > 640) {
           this.state.bullets.splice(i, 1);
           continue;
         }
@@ -470,7 +527,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
               const dist = Math.hypot(b.x - player.x, b.y - player.y);
               if (dist < (playerRadius + 16)) {
                 hitPlayer = true;
-                this.damagePlayer(player, sessionId, "Peluru Pesawat Musuh");
+                this.damagePlayer(player, sessionId, "Peluru Plasma Alien");
               }
             }
           });
@@ -491,7 +548,51 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           continue;
         }
 
-        // Tabrakan Peluru Pemain dengan Pesawat Musuh
+        // A. Tabrakan Peluru Pemain dengan Kapal Induk Alien (Boss)
+        if (this.state.bossActive && this.state.bossY > 30) {
+          if (Math.abs(b.x - this.state.bossX) < 75 && Math.abs(b.y - this.state.bossY) < 45) {
+            this.state.bossHp = Math.max(0, this.state.bossHp - 1);
+
+            const shooter = this.state.players.get(b.playerId);
+            if (shooter && !shooter.isEliminated) {
+              shooter.score += 15; // Setiap tembakan ke kapal induk memberi 15 poin
+            }
+
+            this.broadcast("boss_damaged", {
+              hp: this.state.bossHp,
+              maxHp: this.state.bossMaxHp,
+              x: b.x,
+              y: b.y,
+              shooterId: b.playerId
+            });
+
+            if (this.state.bossHp <= 0) {
+              this.state.bossActive = false;
+              if (shooter && !shooter.isEliminated) {
+                shooter.score += 600; // Bonus besar penghancur kapal induk
+              }
+              // Bonus kontribusi tim untuk semua pilot yang bertahan
+              this.state.players.forEach((p) => {
+                if (!p.isEliminated && p.id !== b.playerId) {
+                  p.score += 300;
+                }
+              });
+
+              this.broadcast("boss_defeated", {
+                x: this.state.bossX,
+                y: this.state.bossY,
+                killerId: b.playerId,
+                killerName: shooter ? shooter.name : "Skuadron Pertahanan Bumi"
+              });
+              console.log(`[Room] 💥 KAPAL INDUK PLANET TAYA HANCUR oleh ${shooter ? shooter.name : "Pilot"}!`);
+            }
+
+            this.state.bullets.splice(i, 1);
+            continue;
+          }
+        }
+
+        // B. Tabrakan Peluru Pemain dengan Pesawat Armada Alien
         let hitEnemy = false;
         for (let j = 0; j < this.state.enemies.length; j++) {
           const enemy = this.state.enemies[j];
@@ -499,7 +600,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
           if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < (enemy.radius + 18)) {
             const isFast = enemy.id === "enemy_fast_diver";
-            const points = isFast ? 75 : 40; // Bonus lebih tinggi jika hancurkan musuh kilat!
+            const points = isFast ? 75 : 40;
 
             const shooter = this.state.players.get(b.playerId);
             if (shooter && !shooter.isEliminated) {
@@ -509,7 +610,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
             this.broadcast("enemy_destroyed", {
               x: enemy.x,
               y: enemy.y,
-              enemyName: enemy.name,
+              enemyName: enemy.name || "Pesawat Alien",
               killerId: b.playerId,
               points: points
             });
@@ -589,6 +690,47 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.broadcast("enemy_shoot", {
       x: bullet.x,
       y: bullet.y
+    });
+  }
+
+  /**
+   * Salvo Peluru Plasma Kapal Induk Alien Planet TaYa (Boss)
+   * 3 peluru menyebar sudut dari inti tengah + 2 meriam berat sayap
+   */
+  private spawnBossBarrage() {
+    if (!this.state.bossActive) return;
+
+    // 1. Tembakan 3 arah plasma dari inti tengah
+    const centerAngles = [-80, 0, 80];
+    for (const speedX of centerAngles) {
+      const bullet = new Bullet();
+      bullet.id = `bbullet_${this.bulletIdCounter++}`;
+      bullet.playerId = "";
+      bullet.x = this.state.bossX;
+      bullet.y = this.state.bossY + 42;
+      bullet.isEnemy = true;
+      bullet.speedX = speedX;
+      bullet.speedY = 270;
+      this.state.bullets.push(bullet);
+    }
+
+    // 2. Meriam plasma sayap kiri dan kanan
+    const wingOffsets = [-60, 60];
+    for (const ox of wingOffsets) {
+      const bullet = new Bullet();
+      bullet.id = `bbullet_${this.bulletIdCounter++}`;
+      bullet.playerId = "";
+      bullet.x = this.state.bossX + ox;
+      bullet.y = this.state.bossY + 30;
+      bullet.isEnemy = true;
+      bullet.speedX = ox < 0 ? -35 : 35;
+      bullet.speedY = 290;
+      this.state.bullets.push(bullet);
+    }
+
+    this.broadcast("boss_shoot", {
+      x: this.state.bossX,
+      y: this.state.bossY
     });
   }
 
@@ -728,6 +870,16 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.timerAccumulator = 0;
     this.state.countdown = 120;
     this.state.bullets.clear();
+
+    // Reset status Kapal Induk Alien (Boss)
+    this.bossSpawned = false;
+    this.bossShootTimer = 0;
+    this.bossDirection = 1;
+    this.state.bossActive = false;
+    this.state.bossHp = 0;
+    this.state.bossMaxHp = 75;
+    this.state.bossX = 300;
+    this.state.bossY = -200;
 
     let idx = 0;
     this.state.players.forEach((player) => {

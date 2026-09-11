@@ -14,20 +14,20 @@
     <!-- Top Corporate Header -->
     <header class="game-header">
       <div class="logo-group">
-        <span class="badge-satire">CORPORATE SURVIVAL SIMULATOR • BAKNUS MAIL EXCLUSIVE</span>
-        <h1 class="logo-title">SSRace <span class="sub">Slim Survival Race</span></h1>
+        <span class="badge-satire">DEFENSE PROTOCOL • PLANET TAYA ALIEN WAR</span>
+        <h1 class="logo-title">SSRace <span class="sub">Space War: Earth Defense</span></h1>
       </div>
 
       <!-- User Session Info / Quick Bar -->
       <div id="user-session-bar" class="connection-bar">
-        <button id="btn-open-leaderboard" class="btn-secondary btn-leaderboard" title="Lihat Klasemen Akumulasi Kantor">🏆 KLASEMEN</button>
-        <button id="btn-change-room" class="btn-secondary" style="display: none;" title="Pindah ke Sektor/Room Lain">🚪 GANTI ROOM</button>
+        <button id="btn-open-leaderboard" class="btn-secondary btn-leaderboard" title="Lihat Peringkat Pilot Pertahanan Bumi">🏆 KLASEMEN</button>
+        <button id="btn-change-room" class="btn-secondary" style="display: none;" title="Pindah ke Sektor Lain">🚪 GANTI SEKTOR</button>
         <div id="session-info" class="session-info" style="display: none;">
-          <span class="user-badge" id="badge-username">👤 Karyawan</span>
-          <span class="user-score-badge" id="badge-total-score">⭐ Total: 0 Poin</span>
+          <span class="user-badge" id="badge-username">👨‍🚀 Pilot</span>
+          <span class="user-score-badge" id="badge-total-score">⭐ Total: 0 Pts</span>
           <button id="btn-logout" class="btn-secondary">Keluar</button>
         </div>
-        <button id="btn-open-login" class="btn-primary">🔐 LOGIN BAKNUS MAIL</button>
+        <button id="btn-open-login" class="btn-primary">🔐 LOGIN PILOT BAKNUS</button>
       </div>
     </header>
 
@@ -73,16 +73,16 @@
         <div class="legend-divider"></div>
         <div class="legend-group">
           <div class="legend-item">
-            <span class="dot coin-25"></span> <strong>25 Lembur</strong>
+            <span class="dot coin-25"></span> <strong>25 Plasma</strong>
           </div>
           <div class="legend-item">
-            <span class="dot coin-50"></span> <strong>50 Tunjangan</strong>
+            <span class="dot coin-50"></span> <strong>50 Photon</strong>
           </div>
           <div class="legend-item">
-            <span class="dot coin-100"></span> <strong>100 Bonus</strong>
+            <span class="dot coin-100"></span> <strong>100 Quantum</strong>
           </div>
           <div class="legend-item">
-            <span class="dot enemy-hazard"></span> <strong class="danger-text">Musuh (+40 / -50)</strong>
+            <span class="dot enemy-hazard"></span> <strong class="danger-text">Armada Alien (+40 / -20)</strong>
           </div>
         </div>
         <div class="legend-divider"></div>
@@ -104,19 +104,17 @@
       </div>
 
       <div class="modal-header">
-        <span class="badge-satire">VERIFIKASI IDENTITAS KARYAWAN</span>
-        <h2>Login Baknus Mail</h2>
-        <p>Akses balapan hanya terbuka untuk pemegang akun resmi Baknus Mail.</p>
+        <span class="badge-satire">JARINGAN KOMANDO PERTAHANAN BUMI</span>
+        <h2>Login Pilot Skuadron</h2>
+        <p>Akses skuadron tempur terbuka untuk pemegang akun resmi Baknus Mail.</p>
       </div>
 
       <form id="form-login" class="login-form">
-        <div class="input-group">
-          <label for="server-url">Server WebSocket</label>
-          <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567" required>
-        </div>
+        <!-- Input Server WebSocket Otomatis Tersembunyi -->
+        <input type="hidden" id="server-url" value="ws://localhost:2567">
 
         <div class="input-group">
-          <label for="input-username">Username Baknus Mail</label>
+          <label for="input-username">Callsign / Username Baknus</label>
           <div class="input-addon-wrapper">
             <input type="text" id="input-username" placeholder="frian_p" required autocomplete="username">
             <span class="input-addon">@smk.baktinusantara666.sch.id</span>
@@ -125,14 +123,14 @@
         </div>
 
         <div class="input-group">
-          <label for="input-password">Password Email</label>
+          <label for="input-password">Password Akun</label>
           <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
         </div>
 
         <div id="login-error" class="login-alert" style="display: none;"></div>
 
         <button type="submit" id="btn-submit-login" class="btn-primary btn-block">
-          🚀 MASUK ARENA BALAP
+          🚀 LUNCURKAN KE ORBIT TEMPUR
         </button>
       </form>
     </div>
@@ -142,9 +140,9 @@
   <div id="leaderboard-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card modal-leaderboard">
       <div class="modal-header">
-        <span class="badge-satire">DATABASE KANTOR • ALL-TIME RANKING</span>
-        <h2>🏆 Klasemen Karyawan Terhebat</h2>
-        <p>Total skor terakumulasi dari seluruh match yang pernah dimainkan.</p>
+        <span class="badge-satire">KOMANDO PERTAHANAN BUMI • ALL-TIME RANKING</span>
+        <h2>🏆 Peringkat Pilot Terhebat</h2>
+        <p>Total skor energi terakumulasi dari seluruh misi pertempuran.</p>
       </div>
 
       <div class="leaderboard-table-container">
@@ -152,10 +150,10 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Karyawan</th>
-              <th>Total Skor</th>
-              <th>Match Terbaik</th>
-              <th>Main</th>
+              <th>Pilot</th>
+              <th>Total Poin</th>
+              <th>Skor Terbaik</th>
+              <th>Misi</th>
             </tr>
           </thead>
           <tbody id="leaderboard-table-body">
@@ -171,17 +169,17 @@
   <!-- Modal Lobby Pemilihan Room 1-10 & Story Board Misi -->
   <div id="lobby-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card modal-lobby">
-      <!-- Story Board Misi Korporat -->
+      <!-- Story Board Misi Invasi Alien Planet TaYa -->
       <div class="storyboard-panel">
         <div class="storyboard-header">
-          <span class="badge-satire">BRIEFING MISI RESMI • CORPORATE SURVIVAL PROTOCOL</span>
-          <h2>🚀 Operasi Pertahanan Kas Kantor</h2>
+          <span class="badge-satire">BRIEFING OPERASI RESMI • EARTH DEFENSE PROTOCOL</span>
+          <h2>🛸 Invasi Koloni Alien Planet TaYa</h2>
         </div>
         <p class="storyboard-narrative">
-          Perusahaan sedang menghadapi krisis KPI darurat! <strong>Anda dan rekan-rekan kerja Anda</strong> diminta untuk mengumpulkan poin sebanyak-banyaknya di orbit antariksa (<strong>Uang Lembur +25</strong>, <strong>Tunjangan +50</strong>, & <strong>Bonus KPI +100</strong>) sambil menghancurkan armada kapal musuh korporat (Deadline Dadakan, Revisi Tengah Malam, Audit Pajak, dll) yang meluncurkan serangan peluru plasma!
+          Koloni Alien dari <strong>Planet TaYa</strong> melancarkan invasi besar-besaran untuk menguasai Bumi! <strong>Anda dan skuadron pilot tempur</strong> dikerahkan ke orbit garis pertahanan terakhir untuk menghadang gempuran armada kapal alien, mengumpulkan inti energi kosmik (<strong>Plasma Core +25</strong>, <strong>Photon Core +50</strong>, & <strong>Quantum Core +100</strong>), dan bersiap menghadapi <strong>Kapal Induk Raksasa Alien Planet TaYa</strong> yang kebal dan bersenjata berat di akhir pertempuran!
         </p>
         <div class="storyboard-alert">
-          ⚠️ <strong>ATURAN PROTOKOL:</strong> Anda dibekali <strong>3 Nyawa</strong>, di mana masing-masing nyawa memiliki <strong>Bar Darah yang menahan 5x tembakan</strong>. Jika seluruh 3 nyawa habis, barulah pesawat Anda hancur dan tereliminasi! Seluruh skor match akan langsung terakumulasi ke profil kantor Anda.
+          ⚠️ <strong>PROTOKOL TEMPUR:</strong> Anda dibekali <strong>3 Nyawa</strong> (dengan bar perisai 5x tembakan per nyawa). Di fase akhir pertempuran, hadapi <strong>Kapal Induk Alien Planet TaYa</strong> yang sulit dikalahkan bersama rekan-rekan pilot Anda!
         </div>
       </div>
 
@@ -191,7 +189,7 @@
           <span class="profile-avatar">👨‍🚀</span>
           <div>
             <div class="profile-username" id="lobby-profile-username">frian_p</div>
-            <div class="profile-role">Karyawan Resmi Baknus Mail</div>
+            <div class="profile-role">Pilot Resmi Skuadron SSRace</div>
           </div>
         </div>
         <div class="profile-stats-grid">
@@ -200,11 +198,11 @@
             <span class="stat-value" id="lobby-stat-total">⭐ 0 Pts</span>
           </div>
           <div class="stat-box">
-            <span class="stat-label">MATCH TERBAIK</span>
+            <span class="stat-label">MISI TERBAIK</span>
             <span class="stat-value" id="lobby-stat-best">🏆 0 Pts</span>
           </div>
           <div class="stat-box">
-            <span class="stat-label">MAIN</span>
+            <span class="stat-label">MISI</span>
             <span class="stat-value" id="lobby-stat-games">🎮 0x</span>
           </div>
         </div>
@@ -214,10 +212,10 @@
       <div class="rooms-section">
         <div class="rooms-header">
           <div>
-            <h3>PILIH SEKTOR PERTEMPURAN (ROOM 1 - 10)</h3>
+            <h3>PILIH SEKTOR PERTEMPURAN (SEKTOR 1 - 10)</h3>
             <p>Pilih nomor sektor yang sama dengan rekan Anda untuk bertempur di arena yang sama!</p>
           </div>
-          <button id="btn-refresh-rooms" class="btn-secondary" title="Segarkan status kapasitas room">🔄 Refresh</button>
+          <button id="btn-refresh-rooms" class="btn-secondary" title="Segarkan status kapasitas sektor">🔄 Refresh</button>
         </div>
 
         <div id="rooms-grid" class="rooms-grid">

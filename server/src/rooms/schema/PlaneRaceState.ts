@@ -6,6 +6,7 @@ export class Bullet extends Schema {
   @type("number") x: number = 0;
   @type("number") y: number = 0;
   @type("boolean") isEnemy: boolean = false;
+  @type("number") speedX: number = 0;
   @type("number") speedY: number = 680;
 }
 
@@ -32,8 +33,8 @@ export class Coin extends Schema {
   @type("number") x: number = 0;
   @type("number") y: number = -50;
   @type("number") speedY: number = 100;
-  @type("number") value: number = 25; // 25 (Lembur), 50 (Tunjangan), 100 (Bonus KPI)
-  @type("string") label: string = "Uang Lembur";
+  @type("number") value: number = 25; // 25 (Plasma), 50 (Photon), 100 (Quantum)
+  @type("string") label: string = "Plasma Core";
   @type("number") radius: number = 14;
 }
 
@@ -59,4 +60,11 @@ export class PlaneRaceState extends Schema {
   @type([ Enemy ]) enemies = new ArraySchema<Enemy>();
   @type("string") winnerName: string = "";
   @type("number") winnerScore: number = 0;
+
+  // Kapal Induk Alien Planet TaYa (Boss Pertempuran Akhir)
+  @type("boolean") bossActive: boolean = false;
+  @type("number") bossHp: number = 0;
+  @type("number") bossMaxHp: number = 75;
+  @type("number") bossX: number = 300;
+  @type("number") bossY: number = -200;
 }

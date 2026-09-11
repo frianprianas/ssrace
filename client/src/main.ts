@@ -63,7 +63,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const fetchAndShowLeaderboard = async () => {
     if (modalLeaderboard) modalLeaderboard.style.display = "flex";
     if (leaderboardTableBody) {
-      leaderboardTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 14px;">⏳ Memuat klasemen karyawan dari database...</td></tr>`;
+      leaderboardTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 14px;">⏳ Memuat klasemen pilot dari database...</td></tr>`;
     }
 
     try {
