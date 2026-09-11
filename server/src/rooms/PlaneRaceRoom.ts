@@ -32,6 +32,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private playerBumpTimes: Map<string, number> = new Map();
   private fastEnemyTimer: number = 0;
   private fastEnemyIndex: number = 0;
+  private startCountdownTimer: any = null;
   private fastEnemyNames = [
     "",
     "",
@@ -146,15 +147,10 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       const starter = this.state.players.get(client.sessionId);
-      console.log(`[Room] 🚀 START GAME ditekan oleh ${starter ? starter.name : client.sessionId}! Memulai race 120s...`);
+      const starterName = starter ? starter.name : "Pilot Skuadron";
+      console.log(`[Room] 🚀 START GAME ditekan oleh ${starterName}! Memulai hitung mundur 3 detik...`);
 
-      this.state.status = "playing";
-      this.state.countdown = 120;
-      this.timerAccumulator = 0;
-
-      this.broadcast("match_started", {
-        startedBy: starter ? starter.name : "Pilot Skuadron"
-      });
+      this.startCountdownSequence(starterName);
     });
 
     // Terima input pemain
@@ -242,10 +238,88 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   onDispose() {
+    if (this.startCountdownTimer) {
+      clearInterval(this.startCountdownTimer);
+      this.startCountdownTimer = null;
+    }
     this.playerInputs.clear();
     this.prevUpDown.clear();
     this.lastShootTimes.clear();
     this.playerBumpTimes.clear();
+  }
+
+  private startCountdownSequence(starterName: string) {
+    if (this.startCountdownTimer) {
+      clearInterval(this.startCountdownTimer);
+      this.startCountdownTimer = null;
+    }
+
+    this.state.status = "starting";
+    this.state.startCountdown = 3;
+
+    // Bersihkan peluru dan atur ulang posisi musuh & koin di atas arena
+    this.state.bullets.clear();
+    this.initEnemies();
+    this.initCoins(8);
+
+    // Reset status pertahanan & skor seluruh pemain sebelum ronde dimulai
+    let pIdx = 0;
+    this.state.players.forEach((p) => {
+      p.hp = 5;
+      p.maxHp = 5;
+      p.lives = 3;
+      p.maxLives = 3;
+      p.score = 0;
+      p.isEliminated = false;
+      p.invulnerableTimer = 0;
+      p.stepY = 2;
+      p.y = this.getStepYCoordinate(2);
+      p.x = 120 + (pIdx * 90) % 360;
+      pIdx++;
+    });
+
+    this.broadcast("countdown_tick", {
+      count: 3,
+      startedBy: starterName
+    });
+
+    let current = 3;
+    this.startCountdownTimer = setInterval(() => {
+      current--;
+      this.state.startCountdown = Math.max(0, current);
+
+      if (current > 0) {
+        this.broadcast("countdown_tick", {
+          count: current,
+          startedBy: starterName
+        });
+      } else {
+        if (this.startCountdownTimer) {
+          clearInterval(this.startCountdownTimer);
+          this.startCountdownTimer = null;
+        }
+
+        // Mulai Ronde Permainan Resmi!
+        this.state.status = "playing";
+        this.state.countdown = 120;
+        this.state.startCountdown = 0;
+        this.timerAccumulator = 0;
+        this.fastEnemyTimer = 0;
+        this.bossSpawned = false;
+        this.state.bossActive = false;
+
+        this.broadcast("countdown_tick", {
+          count: 0,
+          startedBy: starterName
+        });
+
+        this.broadcast("match_started", {
+          startedBy: starterName
+        });
+
+        console.log(`[Room] 🚀 HITUNG MUNDUR SELESAI! Ronde resmi dimulai untuk ${this.state.players.size} pilot.`);
+      }
+    }, 1000);
   }
 
   private getStepYCoordinate(step: number): number {
@@ -264,10 +338,15 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       if (!p.isEliminated) activePlayers++;
     });
 
-    if (this.state.status === "playing") {
+    if (this.state.status === "starting" || this.state.status === "playing") {
       if (activePlayers < 1) {
-        console.log("[Room] Seluruh pemain tereliminasi / keluar. Mengembalikan state ke waiting...");
+        console.log("[Room] Seluruh pemain keluar / tereliminasi. Mengembalikan state ke waiting...");
+        if (this.startCountdownTimer) {
+          clearInterval(this.startCountdownTimer);
+          this.startCountdownTimer = null;
+        }
         this.state.status = "waiting";
+        this.state.startCountdown = 0;
         this.state.countdown = 120;
       }
     }
@@ -407,8 +486,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     }
 
-    // Update Pergerakan & Serangan Kapal Induk Alien (Boss Akhir Level)
-    if (this.state.bossActive) {
+    // Update Pergerakan & Serangan Kapal Induk Alien (Boss Akhir Level) - Hanya saat status playing
+    if (this.state.status === "playing" && this.state.bossActive) {
       if (this.state.bossY < 140) {
         this.state.bossY += 60 * dtSec;
       } else {
@@ -423,25 +502,21 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         }
 
         // Salvo tembakan plasma kapal induk setiap 1.35 detik
-        if (this.state.status !== "finished") {
-          this.bossShootTimer += dtSec;
-          if (this.bossShootTimer >= 1.35) {
-            this.bossShootTimer = 0;
-            this.spawnBossBarrage();
-          }
+        this.bossShootTimer += dtSec;
+        if (this.bossShootTimer >= 1.35) {
+          this.bossShootTimer = 0;
+          this.spawnBossBarrage();
         }
       }
 
       // Tabrakan Fisik Kapal Induk Alien dengan Pesawat Pemain
-      if (this.state.status !== "finished") {
-        this.state.players.forEach((player, sessionId) => {
-          if (!player.isEliminated && player.invulnerableTimer <= 0) {
-            if (Math.abs(player.x - this.state.bossX) < 85 && Math.abs(player.y - this.state.bossY) < 55) {
-              this.damagePlayer(player, sessionId, "Tabrakan Kapal Induk Alien");
-            }
+      this.state.players.forEach((player, sessionId) => {
+        if (!player.isEliminated && player.invulnerableTimer <= 0) {
+          if (Math.abs(player.x - this.state.bossX) < 85 && Math.abs(player.y - this.state.bossY) < 55) {
+            this.damagePlayer(player, sessionId, "Tabrakan Kapal Induk Alien");
           }
-        });
-      }
+        }
+      });
     }
 
     // 2. Update Pergerakan & Tembakan Pemain (Kecepatan geser 210 agar lebih terkendali dan tidak terlalu sensitif)
@@ -471,8 +546,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         const targetY = this.getStepYCoordinate(player.stepY);
         player.y += (targetY - player.y) * 12 * dtSec;
 
-        // Mekanisme Menembak Laser Pemain
-        if (input.shoot) {
+        // Mekanisme Menembak Laser Pemain - HANYA saat status playing!
+        if (this.state.status === "playing" && input.shoot) {
           const lastShoot = this.lastShootTimes.get(sessionId) || 0;
           if (now - lastShoot >= 220) {
             this.lastShootTimes.set(sessionId, now);
@@ -533,10 +608,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     }
 
-    // 4. Update Pesawat Musuh & Tembakan Peluru Musuh
-    this.state.enemies.forEach((enemy) => {
-      enemy.y += enemy.speedY * dtSec;
-      enemy.x += enemy.speedX * dtSec;
+    // 4. Update Pesawat Musuh, Peluru, & Koin (HANYA AKTIF SAAT STATUS PLAYING!)
+    if (this.state.status === "playing") {
+      this.state.enemies.forEach((enemy) => {
+        enemy.y += enemy.speedY * dtSec;
+        enemy.x += enemy.speedX * dtSec;
 
       // Pantulan horizontal
       if (enemy.x <= enemy.radius + 15) {
@@ -548,7 +624,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       // Tembakan Peluru Pesawat Musuh (Menjangkau seluruh arena pertahanan pemain)
-      if (this.state.status !== "finished" && enemy.y > 20 && enemy.y < 800) {
+      if (enemy.y > 20 && enemy.y < 800) {
         enemy.shootTimer += dtSec;
         const shootInterval = 1.8; // Menembak peluru plasma setiap 1.8 detik
         if (enemy.shootTimer >= shootInterval) {
@@ -569,23 +645,21 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       // Tabrakan Langsung Pesawat Musuh dengan Pemain
-      if (this.state.status !== "finished") {
-        this.state.players.forEach((player, sessionId) => {
-          if (!player.isEliminated && player.invulnerableTimer <= 0) {
-            const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-            if (dist < (playerRadius + enemy.radius + 10)) {
-              this.damagePlayer(player, sessionId, enemy.name);
-              if (enemy.id === "enemy_fast_diver") {
-                enemy.y = -800;
-                enemy.speedY = 0;
-                enemy.speedX = 0;
-              } else {
-                this.respawnEnemy(enemy, undefined, 95);
-              }
+      this.state.players.forEach((player, sessionId) => {
+        if (!player.isEliminated && player.invulnerableTimer <= 0) {
+          const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+          if (dist < (playerRadius + enemy.radius + 10)) {
+            this.damagePlayer(player, sessionId, enemy.name);
+            if (enemy.id === "enemy_fast_diver") {
+              enemy.y = -800;
+              enemy.speedY = 0;
+              enemy.speedX = 0;
+            } else {
+              this.respawnEnemy(enemy, undefined, 95);
             }
           }
-        });
-      }
+        }
+      });
     });
 
     // 5. Update Semua Peluru (Pemain, Armada Alien, & Kapal Induk)
@@ -606,17 +680,15 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
         // Tabrakan Peluru Musuh dengan Pemain
         let hitPlayer = false;
-        if (this.state.status !== "finished") {
-          this.state.players.forEach((player, sessionId) => {
-            if (!hitPlayer && !player.isEliminated && player.invulnerableTimer <= 0) {
-              const dist = Math.hypot(b.x - player.x, b.y - player.y);
-              if (dist < (playerRadius + 16)) {
-                hitPlayer = true;
-                this.damagePlayer(player, sessionId, "Peluru Plasma Alien");
-              }
+        this.state.players.forEach((player, sessionId) => {
+          if (!hitPlayer && !player.isEliminated && player.invulnerableTimer <= 0) {
+            const dist = Math.hypot(b.x - player.x, b.y - player.y);
+            if (dist < (playerRadius + 16)) {
+              hitPlayer = true;
+              this.damagePlayer(player, sessionId, "Peluru Plasma Alien");
             }
-          });
-        }
+          }
+        });
 
         if (hitPlayer) {
           this.state.bullets.splice(i, 1);
@@ -727,28 +799,27 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         this.randomizeCoin(coin);
       }
 
-      if (this.state.status !== "finished") {
-        this.state.players.forEach((player, sessionId) => {
-          if (!player.isEliminated) {
-            const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
-            if (dist < (playerRadius + coin.radius + 16)) {
-              player.score += coin.value;
+      this.state.players.forEach((player, sessionId) => {
+        if (!player.isEliminated) {
+          const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
+          if (dist < (playerRadius + coin.radius + 16)) {
+            player.score += coin.value;
 
-              this.broadcast("coin_collected", {
-                playerId: sessionId,
-                playerName: player.name,
-                x: coin.x,
-                y: coin.y,
-                value: coin.value,
-                label: coin.label
-              });
+            this.broadcast("coin_collected", {
+              playerId: sessionId,
+              playerName: player.name,
+              x: coin.x,
+              y: coin.y,
+              value: coin.value,
+              label: coin.label
+            });
 
-              this.randomizeCoin(coin);
-            }
+            this.randomizeCoin(coin);
           }
-        });
-      }
+        }
+      });
     });
+    }
   }
 
   private spawnPlayerBullet(player: Player) {
@@ -951,9 +1022,14 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   }
 
   private resetGame() {
+    if (this.startCountdownTimer) {
+      clearInterval(this.startCountdownTimer);
+      this.startCountdownTimer = null;
+    }
     this.finishedTimer = 0;
     this.timerAccumulator = 0;
     this.state.countdown = 120;
+    this.state.startCountdown = 0;
     this.state.bullets.clear();
 
     // Reset status Kapal Induk Alien (Boss)

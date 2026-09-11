@@ -56,8 +56,9 @@ export class Enemy extends Schema {
 }
 
 export class PlaneRaceState extends Schema {
-  @type("string") status: string = "waiting"; // "waiting" | "playing" | "finished"
-  @type("number") countdown: number = 120; // 120 detik
+  @type("string") status: string = "waiting"; // "waiting" | "starting" | "playing" | "finished"
+  @type("number") countdown: number = 120; // 120 detik pertempuran
+  @type("number") startCountdown: number = 0; // 3, 2, 1 hitung mundur sebelum lepas landas
   @type({ map: Player }) players = new MapSchema<Player>();
   @type([ Bullet ]) bullets = new ArraySchema<Bullet>();
   @type([ Coin ]) coins = new ArraySchema<Coin>();

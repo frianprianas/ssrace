@@ -101,6 +101,11 @@ export class GameScene extends Phaser.Scene {
   private elimReasonText!: Phaser.GameObjects.Text;
   private elimScoreText!: Phaser.GameObjects.Text;
 
+  // Start Countdown Visual Overlay (Hitung Mundur 3.. 2.. 1.. GO!)
+  private countdownContainer: Phaser.GameObjects.Container | null = null;
+  private countdownText: Phaser.GameObjects.Text | null = null;
+  private countdownSubText: Phaser.GameObjects.Text | null = null;
+
   constructor() {
     super({ key: "GameScene" });
   }
@@ -614,6 +619,93 @@ export class GameScene extends Phaser.Scene {
     this.eliminatedModal.add(hitZone);
   }
 
+  /**
+   * Tampilan Animasi Hitung Mundur 3, 2, 1, GO!
+   */
+  public showStartCountdown(count: number) {
+    if (!this.countdownContainer) {
+      this.countdownContainer = this.add.container(300, 480).setDepth(800);
+
+      const glowCircle = this.add.graphics();
+      glowCircle.fillStyle(0x0f172a, 0.85);
+      glowCircle.fillCircle(0, 0, 110);
+      glowCircle.lineStyle(3.5, 0x00f0ff, 0.9);
+      glowCircle.strokeCircle(0, 0, 110);
+      this.countdownContainer.add(glowCircle);
+
+      this.countdownText = this.add.text(0, -12, "", {
+        fontFamily: "'Outfit', sans-serif",
+        fontSize: "80px",
+        fontStyle: "bold",
+        color: "#00f0ff"
+      }).setOrigin(0.5, 0.5);
+      this.countdownContainer.add(this.countdownText);
+
+      this.countdownSubText = this.add.text(0, 52, "", {
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "12px",
+        fontStyle: "bold",
+        color: "#ffffff"
+      }).setOrigin(0.5, 0.5);
+      this.countdownContainer.add(this.countdownSubText);
+    }
+
+    this.countdownContainer.setVisible(true);
+    this.countdownContainer.setScale(0.5);
+    this.countdownContainer.setAlpha(1);
+
+    if (count > 0) {
+      sounds.playCountdownBeep(false);
+
+      let color = "#38bdf8";
+      let sub = "BERSIAP DI KOKPIT...";
+      if (count === 2) {
+        color = "#eab308";
+        sub = "REAKTOR PLASMA AKTIF!";
+      } else if (count === 1) {
+        color = "#ef4444";
+        sub = "MESIN JET TERKUNCI!";
+      }
+
+      this.countdownText?.setText(`${count}`).setColor(color);
+      this.countdownSubText?.setText(sub).setColor(color);
+
+      this.tweens.killTweensOf(this.countdownContainer);
+      this.tweens.add({
+        targets: this.countdownContainer,
+        scale: 1.15,
+        duration: 250,
+        ease: "Back.easeOut",
+        yoyo: true,
+        hold: 450,
+        onComplete: () => {
+          this.countdownContainer?.setScale(1.0);
+        }
+      });
+    } else {
+      // 0 = Detik Peluncuran / GO!
+      sounds.playCountdownBeep(true);
+      sounds.startBgm();
+
+      this.countdownText?.setText("GO!").setColor("#10b981");
+      this.countdownSubText?.setText("🚀 LUNCURKAN MISI!").setColor("#34d399");
+
+      this.tweens.killTweensOf(this.countdownContainer);
+      this.tweens.add({
+        targets: this.countdownContainer,
+        scale: 1.45,
+        alpha: 0,
+        duration: 700,
+        ease: "Power2",
+        onComplete: () => {
+          this.countdownContainer?.setVisible(false);
+          this.countdownContainer?.setScale(1.0);
+          this.countdownContainer?.setAlpha(1);
+        }
+      });
+    }
+  }
+
   private createBossHUD() {
     this.bossHudContainer = this.add.container(300, 78).setDepth(110).setVisible(false);
 
@@ -1069,12 +1161,20 @@ export class GameScene extends Phaser.Scene {
       const totalPlayers = this.room.state.players.size;
 
       if (status === "waiting") {
-        this.statusBadge.setText(`MENUNGGU PILOT (${totalPlayers}/5 - Min 2)`);
+        this.statusBadge.setText(`HANGAR SKUADRON (${totalPlayers}/5 Pilot)`);
         this.statusBadge.setColor("#38bdf8");
-        this.timerText.setText("STANDBY");
+        this.timerText.setText("PILIH KARAKTER");
         this.modalContainer.setVisible(false);
         if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
-        sounds.stopBgm();
+        // Putar musik BGM saat di Hangar / Game dimulai
+        sounds.startBgm();
+      } else if (status === "starting") {
+        this.statusBadge.setText(`SIAP LEPAS LANDAS!`);
+        this.statusBadge.setColor("#f59e0b");
+        this.timerText.setText(`HITUNG: ${this.room.state.startCountdown || 3}`);
+        this.modalContainer.setVisible(false);
+        if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
+        sounds.startBgm();
       } else if (status === "playing") {
         this.statusBadge.setText(`MISI AKTIF (${totalPlayers}/5)`);
         this.statusBadge.setColor("#10b981");
@@ -1097,13 +1197,15 @@ export class GameScene extends Phaser.Scene {
         this.modalWinner.setText(`Pahlawan Pertahanan Bumi:\n⭐ ${this.room.state.winnerName} ⭐\nSkor Akhir: ${this.room.state.winnerScore}`);
         this.modalContainer.setVisible(true);
         if (this.bossHudContainer) this.bossHudContainer.setVisible(false);
-        sounds.stopBgm();
       }
 
       this.updateLeaderboard();
     });
 
     // 6. Broadcast Events dari Server
+    this.room.onMessage("countdown_tick", (data: any) => {
+      this.showStartCountdown(data.count);
+    });
     this.room.onMessage("coin_collected", (data: any) => {
       this.spawnFloatingText(
         data.x, 
@@ -1509,11 +1611,12 @@ export class GameScene extends Phaser.Scene {
   update(time: number, delta: number) {
     const dtSec = delta / 1000;
 
-    // 1. Scroll Starfield
+    // 1. Scroll Starfield (Melayang santai saat persiapan Hangar, melesat cepat saat pertempuran)
     if (this.starGraphics) {
       this.starGraphics.clear();
+      const speedMult = (this.room && this.room.state.status === "playing") ? 1.0 : 0.35;
       this.stars.forEach((star) => {
-        star.y += star.speed * dtSec;
+        star.y += star.speed * speedMult * dtSec;
         if (star.y > 960) {
           star.y = 0;
           star.x = Math.random() * 600;
@@ -1535,7 +1638,7 @@ export class GameScene extends Phaser.Scene {
         this.localShootCooldown -= dtSec;
       }
 
-      if (shoot && this.localShootCooldown <= 0) {
+      if (shoot && this.localShootCooldown <= 0 && this.room.state.status === "playing") {
         this.localShootCooldown = 0.22;
         sounds.playLaser();
       }

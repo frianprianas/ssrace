@@ -16,7 +16,8 @@ class SoundManager {
       if (AudioContextClass) {
         this.ctx = new AudioContextClass();
         this.bgmGain = this.ctx.createGain();
-        this.bgmGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        // Volume BGM dinaikkan ke level yang terdengar jelas & bertenaga
+        this.bgmGain.gain.setValueAtTime(0.28, this.ctx.currentTime);
         this.bgmGain.connect(this.ctx.destination);
       }
     }
@@ -31,7 +32,7 @@ class SoundManager {
 
     if (this.ctx.state === "suspended") {
       this.ctx.resume().then(() => {
-        console.log("[Audio] AudioContext aktif untuk smartphone!");
+        console.log("[Audio] AudioContext aktif untuk smartphone & browser!");
       });
     }
 
@@ -90,35 +91,50 @@ class SoundManager {
     if (!this.ctx || !this.bgmGain) return;
     const now = this.ctx.currentTime;
 
-    // 1. Kick Drum (pada ketukan 0, 4, 8, 12, 16, 20, 24, 28)
+    // 1. Kick Drum (pada ketukan 0, 4, 8, 12, 16, 20, 24, 28) - Bertenaga & punchy
     if (step % 4 === 0) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(35, now + 0.09);
-      gain.gain.setValueAtTime(0.35, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.frequency.setValueAtTime(155, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.11);
+      gain.gain.setValueAtTime(0.52, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
       osc.connect(gain);
       gain.connect(this.bgmGain);
       osc.start(now);
-      osc.stop(now + 0.09);
+      osc.stop(now + 0.11);
     }
 
-    // 2. Hi-Hat (pada ketukan ganjil 2, 6, 10, 14, ...)
+    // 2. Snare / Cyber Clap (pada ketukan 4, 12, 20, 28)
+    if (step === 4 || step === 12 || step === 20 || step === 28) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+      gain.gain.setValueAtTime(0.24, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(this.bgmGain);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+
+    // 3. Hi-Hat (pada ketukan ganjil 2, 6, 10, 14, ...)
     if (step % 2 === 1) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(6000, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.frequency.setValueAtTime(6500, now);
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
       osc.connect(gain);
       gain.connect(this.bgmGain);
       osc.start(now);
-      osc.stop(now + 0.04);
+      osc.stop(now + 0.045);
     }
 
-    // 3. Cyber Bassline (A minor / Corporate Cyberpunk Scale)
+    // 4. Cyber Bassline (A minor Scale Synthwave)
     // A1 = 55, C2 = 65.41, D2 = 73.42, E2 = 82.41, G1 = 49
     const bassNotes = [
       55, 55, 110, 55, 65.41, 55, 73.42, 82.41,
@@ -133,22 +149,21 @@ class SoundManager {
     bassOsc.type = "sawtooth";
     bassOsc.frequency.setValueAtTime(bassFreq, now);
 
-    // Low-pass filter untuk punchy synth bass
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(650, now);
+    filter.frequency.setValueAtTime(750, now);
 
-    bassGain.gain.setValueAtTime(0.22, now);
-    bassGain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+    bassGain.gain.setValueAtTime(0.35, now);
+    bassGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
     bassOsc.connect(filter);
     filter.connect(bassGain);
     bassGain.connect(this.bgmGain);
 
     bassOsc.start(now);
-    bassOsc.stop(now + 0.14);
+    bassOsc.stop(now + 0.15);
 
-    // 4. Arpeggiator Lead Melody (setiap 2 step)
+    // 5. Arpeggiator Lead Melody (setiap 2 step)
     if (step % 2 === 0) {
       const leadNotes = [
         440, 523.25, 659.25, 783.99, 880, 783.99, 659.25, 523.25,
@@ -161,13 +176,51 @@ class SoundManager {
       leadOsc.type = "square";
       leadOsc.frequency.setValueAtTime(leadFreq, now);
 
-      leadGain.gain.setValueAtTime(0.07, now);
-      leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      leadGain.gain.setValueAtTime(0.16, now);
+      leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
       leadOsc.connect(leadGain);
       leadGain.connect(this.bgmGain);
       leadOsc.start(now);
-      leadOsc.stop(now + 0.11);
+      leadOsc.stop(now + 0.12);
+    }
+  }
+
+  // Efek Suara Hitung Mundur 3.. 2.. 1.. GO!
+  playCountdownBeep(isGo: boolean = false) {
+    if (!this.sfxEnabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    if (isGo) {
+      // "GO! / LUNCURKAN!" - Power chord glide cerah dan bertenaga
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.35);
+
+      gain.gain.setValueAtTime(0.40, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else {
+      // Hitungan 3, 2, 1 - Beep frekuensi tinggi 880Hz (A5)
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
     }
   }
 

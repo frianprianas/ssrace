@@ -474,9 +474,14 @@ window.addEventListener("DOMContentLoaded", () => {
             if (modalHangar) modalHangar.style.display = "flex";
             if (touchControls) touchControls.style.display = "none";
             renderHangarCards();
+          } else if (activeColyseusRoom.state.status === "starting") {
+            if (modalHangar) modalHangar.style.display = "none";
+            if (touchControls) touchControls.style.display = "flex";
+            sounds.startBgm();
           } else if (activeColyseusRoom.state.status === "playing") {
             if (modalHangar) modalHangar.style.display = "none";
             if (touchControls) touchControls.style.display = "flex";
+            sounds.startBgm();
           }
         });
 
@@ -491,10 +496,16 @@ window.addEventListener("DOMContentLoaded", () => {
           alert(data.message || "Gagal memilih karakter.");
         });
 
+        activeColyseusRoom.onMessage("countdown_tick", (data: any) => {
+          if (modalHangar) modalHangar.style.display = "none";
+          if (touchControls) touchControls.style.display = "flex";
+          scene.showStartCountdown(data.count);
+        });
+
         activeColyseusRoom.onMessage("match_started", () => {
           if (modalHangar) modalHangar.style.display = "none";
           if (touchControls) touchControls.style.display = "flex";
-          sounds.playLaser();
+          sounds.startBgm();
         });
       }
     } catch (e: any) {
@@ -603,10 +614,21 @@ window.addEventListener("DOMContentLoaded", () => {
     return game.scene.getScene("GameScene") as GameScene;
   };
 
-  // Pastikan AudioContext smartphone aktif sejak sentuhan / interaksi pertama
-  window.addEventListener("touchstart", () => sounds.unlockAudio(), { passive: true });
-  window.addEventListener("touchend", () => sounds.unlockAudio(), { passive: true });
-  window.addEventListener("click", () => sounds.unlockAudio(), { passive: true });
+  // Pastikan AudioContext smartphone & desktop aktif dan BGM mulai sejak interaksi pertama atau web dibuka
+  const startAudioAndBgm = () => {
+    sounds.unlockAudio();
+    sounds.startBgm();
+  };
+  window.addEventListener("touchstart", startAudioAndBgm, { passive: true });
+  window.addEventListener("touchend", startAudioAndBgm, { passive: true });
+  window.addEventListener("click", startAudioAndBgm, { passive: true });
+  window.addEventListener("pointerdown", startAudioAndBgm, { passive: true });
+  window.addEventListener("keydown", startAudioAndBgm, { passive: true });
+
+  // Coba putar BGM otomatis saat halaman web dibuka
+  try {
+    sounds.startBgm();
+  } catch (e) {}
 
   const joystickZone = document.getElementById("virtual-joystick-zone");
   const joystickBase = document.getElementById("joystick-base");
