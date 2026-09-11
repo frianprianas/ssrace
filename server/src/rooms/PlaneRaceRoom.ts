@@ -249,8 +249,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       });
     });
 
-    // Update loop 50 FPS (20ms)
+    // Update loop 50 FPS (20ms simulasi fisika)
     this.setSimulationInterval((deltaTime) => this.update(deltaTime), 1000 / 50);
+
+    // Tingkatkan Patch Rate Colyseus ke 33.3ms (30 FPS network tick rate) agar transmisi data lebih rapat & minim lag
+    this.setPatchRate(1000 / 30);
   }
 
   onJoin(client: Client, options?: any, auth?: any) {

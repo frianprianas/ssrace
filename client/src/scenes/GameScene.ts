@@ -22,6 +22,8 @@ interface BulletData {
   targetX: number;
   targetY: number;
   isEnemy: boolean;
+  speedX?: number;
+  speedY?: number;
 }
 
 interface CoinData {
@@ -29,6 +31,7 @@ interface CoinData {
   sprite: Phaser.GameObjects.Sprite;
   targetX: number;
   targetY: number;
+  speedY?: number;
   value: number;
 }
 
@@ -38,6 +41,8 @@ interface EnemyData {
   exhaust: Phaser.GameObjects.Sprite;
   targetX: number;
   targetY: number;
+  speedX?: number;
+  speedY?: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -1118,6 +1123,8 @@ export class GameScene extends Phaser.Scene {
         targetX: bullet.x,
         targetY: bullet.y,
         isEnemy,
+        speedX: bullet.speedX || 0,
+        speedY: bullet.speedY || (isEnemy ? 240 : 680),
       };
 
       this.bullets.set(bullet.id, bulletData);
@@ -1125,6 +1132,8 @@ export class GameScene extends Phaser.Scene {
       bullet.onChange(() => {
         bulletData.targetX = bullet.x;
         bulletData.targetY = bullet.y;
+        bulletData.speedX = bullet.speedX || 0;
+        bulletData.speedY = bullet.speedY || (isEnemy ? 240 : 680);
       });
     });
 
@@ -1159,6 +1168,7 @@ export class GameScene extends Phaser.Scene {
         sprite,
         targetX: coin.x,
         targetY: coin.y,
+        speedY: coin.speedY || 90,
         value: coin.value,
       };
 
@@ -1167,6 +1177,7 @@ export class GameScene extends Phaser.Scene {
       coin.onChange(() => {
         coinData.targetX = coin.x;
         coinData.targetY = coin.y;
+        coinData.speedY = coin.speedY || 90;
         coinData.value = coin.value;
 
         let newTexture = "coin_25";
@@ -1203,6 +1214,8 @@ export class GameScene extends Phaser.Scene {
         exhaust,
         targetX: enemy.x,
         targetY: enemy.y,
+        speedX: enemy.speedX || 0,
+        speedY: enemy.speedY || 95,
       };
 
       this.enemies.set(enemy.id, enemyData);
@@ -1210,6 +1223,8 @@ export class GameScene extends Phaser.Scene {
       enemy.onChange(() => {
         enemyData.targetX = enemy.x;
         enemyData.targetY = enemy.y;
+        enemyData.speedX = enemy.speedX || 0;
+        enemyData.speedY = enemy.speedY || 95;
       });
     });
 
@@ -1826,10 +1841,26 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // 3. Interpolasi Posisi & Animasi Pemain
+    // 3. Client Prediction & Interpolasi Posisi Pemain
     this.players.forEach((p) => {
-      p.container.x = Phaser.Math.Linear(p.container.x, p.targetX, 0.35);
-      p.container.y = Phaser.Math.Linear(p.container.y, p.targetY, 0.35);
+      if (p.isLocal) {
+        // CLIENT PREDICTION: Respon instan tanpa delay saat joystick / keyboard ditekan
+        const moveSpeedX = 260;
+        const left = (this.cursors?.left.isDown || this.wasd?.left.isDown || this.touchInput.left);
+        const right = (this.cursors?.right.isDown || this.wasd?.right.isDown || this.touchInput.right);
+
+        if (left) p.container.x -= moveSpeedX * dtSec;
+        if (right) p.container.x += moveSpeedX * dtSec;
+        p.container.x = Math.max(35, Math.min(565, p.container.x));
+
+        // Soft reconcile dengan target server
+        p.container.x = Phaser.Math.Linear(p.container.x, p.targetX, 0.15);
+        p.container.y = Phaser.Math.Linear(p.container.y, p.targetY, 0.25);
+      } else {
+        p.container.x = Phaser.Math.Linear(p.container.x, p.targetX, 0.45);
+        p.container.y = Phaser.Math.Linear(p.container.y, p.targetY, 0.45);
+      }
+
       p.exhaust.scaleY = 0.8 + Math.random() * 0.4;
 
       // Animasi Denyut Halo Beacon Pesawat Sendiri
@@ -1841,20 +1872,29 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // 4. Interpolasi Posisi Peluru (Termasuk tembakan menyebar / diagonal)
+    // 4. Dead Reckoning & Interpolasi Peluru (Meluncur Mulus 60 FPS Tanpa Patah-Patah)
     this.bullets.forEach((b) => {
-      b.sprite.x = Phaser.Math.Linear(b.sprite.x, b.targetX, 0.55);
-      b.sprite.y = Phaser.Math.Linear(b.sprite.y, b.targetY, 0.55);
+      if (b.isEnemy) {
+        b.sprite.y += (b.speedY || 240) * dtSec;
+        b.sprite.x += (b.speedX || 0) * dtSec;
+      } else {
+        b.sprite.y -= (b.speedY || 680) * dtSec;
+      }
+      b.sprite.x = Phaser.Math.Linear(b.sprite.x, b.targetX, 0.35);
+      b.sprite.y = Phaser.Math.Linear(b.sprite.y, b.targetY, 0.35);
     });
 
-    // 5. Interpolasi Posisi Koin Inti Energi
+    // 5. Dead Reckoning & Interpolasi Koin Inti Energi
     this.coins.forEach((c) => {
+      c.container.y += (c.speedY || 90) * dtSec;
       c.container.x = Phaser.Math.Linear(c.container.x, c.targetX, 0.25);
       c.container.y = Phaser.Math.Linear(c.container.y, c.targetY, 0.25);
     });
 
-    // 6. Interpolasi Posisi Pesawat Musuh
+    // 6. Dead Reckoning & Interpolasi Pesawat Musuh
     this.enemies.forEach((e) => {
+      e.container.y += (e.speedY || 95) * dtSec;
+      e.container.x += (e.speedX || 0) * dtSec;
       e.container.x = Phaser.Math.Linear(e.container.x, e.targetX, 0.3);
       e.container.y = Phaser.Math.Linear(e.container.y, e.targetY, 0.3);
       e.exhaust.scaleY = 0.8 + Math.random() * 0.4;
