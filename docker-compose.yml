@@ -11,6 +11,9 @@ services:
       - PORT=2567
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_change_me}
+      - MAIL_HOST=${MAIL_HOST:-mail.smk.baktinusantara666.sch.id}
+      - IMAP_PORT=${IMAP_PORT:-993}
+      - DEFAULT_EMAIL_DOMAIN=${DEFAULT_EMAIL_DOMAIN:-smk.baktinusantara666.sch.id}
       - BAKNUS_MAIL_API_URL=${BAKNUS_MAIL_API_URL:-http://host.docker.internal:5000/api/auth/login}
       - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-smk.baktinusantara666.sch.id,baktinusantara666.sch.id,baknus.sch.id}
     extra_hosts:

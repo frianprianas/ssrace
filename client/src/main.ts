@@ -25,7 +25,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const modalLogin = document.getElementById("login-modal") as HTMLDivElement;
   const formLogin = document.getElementById("form-login") as HTMLFormElement;
   const inputServer = document.getElementById("server-url") as HTMLInputElement;
-  const inputEmail = document.getElementById("input-email") as HTMLInputElement;
+  const inputUsername = document.getElementById("input-username") as HTMLInputElement;
   const inputPassword = document.getElementById("input-password") as HTMLInputElement;
   const loginError = document.getElementById("login-error") as HTMLDivElement;
   const btnSubmit = document.getElementById("btn-submit-login") as HTMLButtonElement;
@@ -54,10 +54,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // Cek token tersimpan atau URL param SSO (?token=...)
   const urlParams = new URLSearchParams(window.location.search);
   const ssoToken = urlParams.get("token") || localStorage.getItem("baknus_token");
-  const savedEmail = localStorage.getItem("baknus_email");
+  const savedUsername = localStorage.getItem("baknus_username");
 
-  if (savedEmail && inputEmail) {
-    inputEmail.value = savedEmail;
+  if (savedUsername && inputUsername) {
+    inputUsername.value = savedUsername;
   }
 
   const showModal = (show: boolean) => {
@@ -87,22 +87,29 @@ window.addEventListener("DOMContentLoaded", () => {
       btnSubmit.innerText = "⏳ MEMVERIFIKASI AKUN...";
 
       const serverUrl = inputServer.value.trim() || "ws://localhost:2567";
-      const email = inputEmail.value.trim();
+      const rawUser = inputUsername.value.trim().toLowerCase();
+      // Bersihkan jika user tidak sengaja mengetik @smk...
+      const username = rawUser.includes("@") ? rawUser.split("@")[0] : rawUser;
+      const fullEmail = `${username}@smk.baktinusantara666.sch.id`;
       const password = inputPassword.value;
 
       try {
         const scene = game.scene.getScene("GameScene") as GameScene;
         if (!scene) throw new Error("Game engine belum siap.");
 
-        await scene.connectToServer({ serverUrl, email, password });
+        await scene.connectToServer({ 
+          serverUrl, 
+          email: fullEmail,
+          password 
+        });
 
-        // Simpan sesi
-        localStorage.setItem("baknus_email", email);
+        // Simpan sesi username
+        localStorage.setItem("baknus_username", username);
         showModal(false);
-        updateSessionUI(email);
+        updateSessionUI(fullEmail, username);
       } catch (err: any) {
         console.error("Login gagal:", err);
-        loginError.innerText = err.message || "Gagal masuk. Periksa email dan password Baknus Mail.";
+        loginError.innerText = err.message || "Gagal masuk. Periksa username dan password Baknus Mail.";
         loginError.style.display = "block";
       } finally {
         btnSubmit.disabled = false;
@@ -119,8 +126,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (scene) {
         try {
           await scene.connectToServer({ serverUrl, token: ssoToken });
-          showModal(false);
-          updateSessionUI(savedEmail || "Karyawan Baknus");
+          const fullEmail = savedUsername ? `${savedUsername}@smk.baktinusantara666.sch.id` : "Karyawan Baknus";
+          updateSessionUI(fullEmail, savedUsername || "Karyawan");
         } catch (e) {
           console.warn("SSO Token kedaluwarsa, tampilkan modal login.", e);
           localStorage.removeItem("baknus_token");

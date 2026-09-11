@@ -48,13 +48,17 @@
               </div>
 
               <div class="input-group">
-                <label for="input-email">Email Resmi Baknus Mail</label>
-                <input type="email" id="input-email" placeholder="nama@smk.baktinusantara666.sch.id" required>
+                <label for="input-username">Username Baknus Mail</label>
+                <div class="input-addon-wrapper">
+                  <input type="text" id="input-username" placeholder="frian_p" required autocomplete="username">
+                  <span class="input-addon">@smk.baktinusantara666.sch.id</span>
+                </div>
+                <small class="input-hint">Cukup masukkan username depan Anda saja</small>
               </div>
 
               <div class="input-group">
                 <label for="input-password">Password Email</label>
-                <input type="password" id="input-password" placeholder="••••••••" required>
+                <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
               </div>
 
               <div id="login-error" class="login-alert" style="display: none;"></div>
