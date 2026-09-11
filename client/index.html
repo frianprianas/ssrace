@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SSRace - Slim Survival Race | Baknus Mail Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,89 +31,58 @@
 
     <!-- Main Game Canvas Container -->
     <main class="canvas-wrapper">
-      <div id="game-container">
-        <!-- Overlay Modal Login Baknus Mail -->
-        <div id="login-modal" class="modal-overlay">
-          <div class="modal-card">
-            <div class="modal-header">
-              <span class="badge-satire">VERIFIKASI IDENTITAS KARYAWAN</span>
-              <h2>Login Baknus Mail</h2>
-              <p>Akses balapan hanya terbuka untuk pemegang akun resmi Baknus Mail.</p>
-            </div>
+      <div id="game-container"></div>
 
-            <form id="form-login" class="login-form">
-              <div class="input-group">
-                <label for="server-url">Server WebSocket</label>
-                <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567" required>
-              </div>
-
-              <div class="input-group">
-                <label for="input-username">Username Baknus Mail</label>
-                <div class="input-addon-wrapper">
-                  <input type="text" id="input-username" placeholder="frian_p" required autocomplete="username">
-                  <span class="input-addon">@smk.baktinusantara666.sch.id</span>
-                </div>
-                <small class="input-hint">Cukup masukkan username depan Anda saja</small>
-              </div>
-
-              <div class="input-group">
-                <label for="input-password">Password Email</label>
-                <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
-              </div>
-
-              <div id="login-error" class="login-alert" style="display: none;"></div>
-
-              <button type="submit" id="btn-submit-login" class="btn-primary btn-block">
-                🚀 MASUK ARENA BALAP
-              </button>
-            </form>
-        <!-- Virtual Touch Controls untuk Smartphone / Layar Sentuh -->
-        <div id="touch-controls" class="touch-overlay">
-          <div class="touch-dpad">
-            <div class="touch-row-vert">
-              <button id="touch-up" class="touch-btn touch-btn-vert" aria-label="Maju">▲ MAJU</button>
-            </div>
-            <div class="touch-row-horiz">
-              <button id="touch-left" class="touch-btn touch-btn-horiz" aria-label="Kiri">◄</button>
-              <button id="touch-right" class="touch-btn touch-btn-horiz" aria-label="Kanan">►</button>
-            </div>
-            <div class="touch-row-vert">
-              <button id="touch-down" class="touch-btn touch-btn-vert" aria-label="Mundur">▼ MUNDUR</button>
-            </div>
+      <!-- Virtual Touch Controls untuk Smartphone / Layar Sentuh -->
+      <div id="touch-controls" class="touch-overlay" style="display: none;">
+        <div class="touch-dpad">
+          <div class="touch-row-vert">
+            <button id="touch-up" class="touch-btn touch-btn-vert" aria-label="Maju">▲ MAJU</button>
           </div>
-
-          <div class="touch-action">
-            <button id="touch-fire" class="touch-btn touch-btn-fire" aria-label="Tembak">
-              <span class="fire-icon">🔥</span>
-              <span class="fire-label">TEMBAK</span>
-            </button>
+          <div class="touch-row-horiz">
+            <button id="touch-left" class="touch-btn touch-btn-horiz" aria-label="Kiri">◄</button>
+            <button id="touch-right" class="touch-btn touch-btn-horiz" aria-label="Kanan">►</button>
           </div>
+          <div class="touch-row-vert">
+            <button id="touch-down" class="touch-btn touch-btn-vert" aria-label="Mundur">▼ MUNDUR</button>
+          </div>
+        </div>
+
+        <div class="touch-action">
+          <button id="touch-fire" class="touch-btn touch-btn-fire" aria-label="Tembak">
+            <span class="fire-icon">🔥</span>
+            <span class="fire-label">TEMBAK</span>
+          </button>
         </div>
       </div>
 
       <!-- Instruction / Legend Footer -->
       <div class="legend-panel">
-        <div class="legend-item">
-          <span class="key-cap">A</span> <span class="key-cap">D</span> / <span class="key-cap">◄</span> <span class="key-cap">►</span> <strong>Geser</strong>
-        </div>
-        <div class="legend-item">
-          <span class="key-cap">W</span> <span class="key-cap">S</span> / <span class="key-cap">▲</span> <span class="key-cap">▼</span> <strong>3 Langkah</strong>
-        </div>
-        <div class="legend-item">
-          <span class="key-cap">SPASI</span> / <span class="key-cap">TOUCH</span> <strong>Tembak</strong>
+        <div class="legend-group">
+          <div class="legend-item">
+            <span class="key-cap">A</span> <span class="key-cap">D</span> / <span class="key-cap">◄</span> <span class="key-cap">►</span> <strong>Geser</strong>
+          </div>
+          <div class="legend-item">
+            <span class="key-cap">W</span> <span class="key-cap">S</span> / <span class="key-cap">▲</span> <span class="key-cap">▼</span> <strong>3 Baris</strong>
+          </div>
+          <div class="legend-item">
+            <span class="key-cap">SPASI</span> / <span class="key-cap">TOUCH</span> <strong>Tembak</strong>
+          </div>
         </div>
         <div class="legend-divider"></div>
-        <div class="legend-item">
-          <span class="dot coin-25"></span> <strong>25</strong>
-        </div>
-        <div class="legend-item">
-          <span class="dot coin-50"></span> <strong>50</strong>
-        </div>
-        <div class="legend-item">
-          <span class="dot coin-100"></span> <strong>100</strong>
-        </div>
-        <div class="legend-item">
-          <span class="dot enemy-hazard"></span> <strong class="danger-text">Musuh (+40 / -50)</strong>
+        <div class="legend-group">
+          <div class="legend-item">
+            <span class="dot coin-25"></span> <strong>25 Lembur</strong>
+          </div>
+          <div class="legend-item">
+            <span class="dot coin-50"></span> <strong>50 Tunjangan</strong>
+          </div>
+          <div class="legend-item">
+            <span class="dot coin-100"></span> <strong>100 Bonus</strong>
+          </div>
+          <div class="legend-item">
+            <span class="dot enemy-hazard"></span> <strong class="danger-text">Musuh (+40 / -50)</strong>
+          </div>
         </div>
         <div class="legend-divider"></div>
         <div class="audio-controls-group">
@@ -122,6 +91,44 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Overlay Modal Login Baknus Mail (Global Centered Modal) -->
+  <div id="login-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="badge-satire">VERIFIKASI IDENTITAS KARYAWAN</span>
+        <h2>Login Baknus Mail</h2>
+        <p>Akses balapan hanya terbuka untuk pemegang akun resmi Baknus Mail.</p>
+      </div>
+
+      <form id="form-login" class="login-form">
+        <div class="input-group">
+          <label for="server-url">Server WebSocket</label>
+          <input type="text" id="server-url" value="ws://localhost:2567" placeholder="ws://localhost:2567" required>
+        </div>
+
+        <div class="input-group">
+          <label for="input-username">Username Baknus Mail</label>
+          <div class="input-addon-wrapper">
+            <input type="text" id="input-username" placeholder="frian_p" required autocomplete="username">
+            <span class="input-addon">@smk.baktinusantara666.sch.id</span>
+          </div>
+          <small class="input-hint">Cukup masukkan username depan Anda saja</small>
+        </div>
+
+        <div class="input-group">
+          <label for="input-password">Password Email</label>
+          <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <div id="login-error" class="login-alert" style="display: none;"></div>
+
+        <button type="submit" id="btn-submit-login" class="btn-primary btn-block">
+          🚀 MASUK ARENA BALAP
+        </button>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

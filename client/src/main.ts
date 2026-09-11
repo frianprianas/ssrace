@@ -68,12 +68,17 @@ window.addEventListener("DOMContentLoaded", () => {
     inputUsername.value = savedUsername;
   }
 
+  const touchControls = document.getElementById("touch-controls") as HTMLDivElement;
+
   const showModal = (show: boolean) => {
     if (modalLogin) {
       modalLogin.style.display = show ? "flex" : "none";
     }
     if (btnOpenLogin) {
       btnOpenLogin.style.display = show ? "none" : (ssoToken ? "none" : "block");
+    }
+    if (touchControls) {
+      touchControls.style.display = show ? "none" : "flex";
     }
   };
 
