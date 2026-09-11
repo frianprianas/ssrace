@@ -21,6 +21,14 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private finishedTimer: number = 0;
   private bulletIdCounter: number = 0;
   private playerBumpTimes: Map<string, number> = new Map();
+  private fastEnemyTimer: number = 0;
+  private fastEnemyIndex: number = 0;
+  private fastEnemyNames = [
+    "⚡ Interceptor Kilat",
+    "🔥 Pemecatan Massal",
+    "⚡ SPJ Dadakan",
+    "🚀 Deadline Kilat"
+  ];
 
   // Profil Pesawat Tempur Musuh
   private enemyTemplates = [
@@ -219,6 +227,42 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       this.respawnEnemy(enemy, -70 - (i * 100), template.speedY);
       this.state.enemies.push(enemy);
     }
+
+    // Tambahkan 1 Pesawat Tempur Penyelam Kilat Khusus (Fast Diver Interceptor)
+    const fastEnemy = new Enemy();
+    fastEnemy.id = "enemy_fast_diver";
+    fastEnemy.name = "⚡ Interceptor Kilat";
+    fastEnemy.radius = 24;
+    fastEnemy.enemyType = 0;
+    fastEnemy.x = 300;
+    fastEnemy.y = -600; // Parkir di luar layar sampai dipanggil meluncur
+    fastEnemy.speedY = 0;
+    fastEnemy.speedX = 0;
+    fastEnemy.hp = 1;
+    this.state.enemies.push(fastEnemy);
+  }
+
+  private launchFastDiverEnemy() {
+    const fastEnemy = this.state.enemies.find(e => e.id === "enemy_fast_diver");
+    if (!fastEnemy) return;
+
+    const name = this.fastEnemyNames[this.fastEnemyIndex % this.fastEnemyNames.length];
+    this.fastEnemyIndex++;
+
+    fastEnemy.name = name;
+    fastEnemy.x = 60 + Math.random() * 480;
+    fastEnemy.y = -70;
+    fastEnemy.speedY = 380 + Math.random() * 70; // Meluncur sangat cepat (380 - 450 px/detik)
+    fastEnemy.speedX = (Math.random() - 0.5) * 50;
+    fastEnemy.hp = 1;
+    fastEnemy.shootTimer = 0.4;
+
+    this.broadcast("fast_enemy_incoming", {
+      x: fastEnemy.x,
+      name: fastEnemy.name
+    });
+
+    console.log(`[Room] ${fastEnemy.name} MELUNCUR KILAT di X=${Math.round(fastEnemy.x)}, SpeedY=${Math.round(fastEnemy.speedY)}`);
   }
 
   private respawnEnemy(enemy: Enemy, customY?: number, baseSpeed: number = 95) {
@@ -244,6 +288,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         if (this.state.countdown === 0) {
           this.endGame();
         }
+      }
+
+      // Setiap 5.5 detik sekali meluncurkan musuh penyelam kilat
+      this.fastEnemyTimer += dtSec;
+      if (this.fastEnemyTimer >= 5.5) {
+        this.fastEnemyTimer = 0;
+        this.launchFastDiverEnemy();
       }
     } else if (this.state.status === "finished") {
       this.finishedTimer += dtSec;
@@ -355,8 +406,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         enemy.speedX = -Math.abs(enemy.speedX);
       }
 
-      // Tembakan Peluru Lambat Pesawat Musuh
-      if (this.state.status !== "finished" && enemy.y > 20 && enemy.y < 820) {
+      // Tembakan Peluru Pesawat Musuh (Menjangkau seluruh arena pertahanan pemain)
+      if (this.state.status !== "finished" && enemy.y > 20 && enemy.y < 800) {
         enemy.shootTimer += dtSec;
         const shootInterval = 1.8; // Menembak peluru plasma setiap 1.8 detik
         if (enemy.shootTimer >= shootInterval) {
@@ -367,7 +418,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
       // Respawn jika lewat bawah layar
       if (enemy.y > 1000) {
-        this.respawnEnemy(enemy, undefined, 95);
+        if (enemy.id === "enemy_fast_diver") {
+          enemy.y = -800; // Parkir di luar layar sampai peluncuran berikutnya
+          enemy.speedY = 0;
+          enemy.speedX = 0;
+        } else {
+          this.respawnEnemy(enemy, undefined, 95);
+        }
       }
 
       // Tabrakan Langsung Pesawat Musuh dengan Pemain
@@ -377,7 +434,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
             const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
             if (dist < (playerRadius + enemy.radius + 10)) {
               this.damagePlayer(player, sessionId, enemy.name);
-              this.respawnEnemy(enemy, undefined, 95);
+              if (enemy.id === "enemy_fast_diver") {
+                enemy.y = -800;
+                enemy.speedY = 0;
+                enemy.speedX = 0;
+              } else {
+                this.respawnEnemy(enemy, undefined, 95);
+              }
             }
           }
         });
@@ -390,11 +453,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       if (!b) continue;
 
       if (b.isEnemy) {
-        // Peluru musuh meluncur ke bawah dengan lambat (150 px/detik)
-        b.y += (b.speedY || 150) * dtSec;
+        // Peluru musuh meluncur mantap ke bawah mencapai pemain (240 px/detik)
+        b.y += (b.speedY || 240) * dtSec;
 
-        // Hapus jika lewat batas bawah layar
-        if (b.y > 630) {
+        // Hapus HANYA jika lewat batas bawah layar (arena 960px, pemain ada di 740..900)
+        if (b.y > 1020) {
           this.state.bullets.splice(i, 1);
           continue;
         }
@@ -435,9 +498,12 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           if (!enemy) continue;
 
           if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < (enemy.radius + 18)) {
+            const isFast = enemy.id === "enemy_fast_diver";
+            const points = isFast ? 75 : 40; // Bonus lebih tinggi jika hancurkan musuh kilat!
+
             const shooter = this.state.players.get(b.playerId);
             if (shooter && !shooter.isEliminated) {
-              shooter.score += 40;
+              shooter.score += points;
             }
 
             this.broadcast("enemy_destroyed", {
@@ -445,10 +511,16 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
               y: enemy.y,
               enemyName: enemy.name,
               killerId: b.playerId,
-              points: 40
+              points: points
             });
 
-            this.respawnEnemy(enemy, undefined, 95);
+            if (isFast) {
+              enemy.y = -800;
+              enemy.speedY = 0;
+              enemy.speedX = 0;
+            } else {
+              this.respawnEnemy(enemy, undefined, 95);
+            }
             hitEnemy = true;
             break;
           }
@@ -511,7 +583,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     bullet.x = enemy.x;
     bullet.y = enemy.y + enemy.radius + 4;
     bullet.isEnemy = true;
-    bullet.speedY = 150; // Peluru pelan ke bawah
+    bullet.speedY = 240; // Peluru meluncur mantap ke bawah sampai mencapai pemain
     this.state.bullets.push(bullet);
 
     this.broadcast("enemy_shoot", {

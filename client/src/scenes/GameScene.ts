@@ -720,11 +720,13 @@ export class GameScene extends Phaser.Scene {
       const isEnemy = bullet.isEnemy;
 
       if (isEnemy) {
-        // Peluru Musuh: Orb Plasma Merah/Oranye Mematikan
-        gfx.fillStyle(0xef4444, 0.95);
-        gfx.fillCircle(0, 0, 5);
+        // Peluru Musuh: Orb Plasma Merah/Oranye Mematikan dengan Aura Cahaya Terang
+        gfx.fillStyle(0xef4444, 0.35);
+        gfx.fillCircle(0, 0, 8.5); // Outer glowing aura
+        gfx.fillStyle(0xff2200, 0.95);
+        gfx.fillCircle(0, 0, 5.5);
         gfx.fillStyle(0xfef08a, 1);
-        gfx.fillCircle(0, 0, 2.5);
+        gfx.fillCircle(0, 0, 3);
       } else {
         // Peluru Laser Pemain: Balok Laser Cyan / Hijau
         gfx.fillStyle(isLocal ? 0x00f0ff : 0x10b981, 1);
@@ -901,6 +903,13 @@ export class GameScene extends Phaser.Scene {
 
     this.room.onMessage("enemy_shoot", () => {
       sounds.playEnemyLaser();
+    });
+
+    this.room.onMessage("fast_enemy_incoming", (data: any) => {
+      // Peringatan radar musuh kilat meluncur cepat dari atas
+      this.spawnFloatingText(data.x, 80, `⚠️ AWAS MUSUH KILAT!\n${data.name}`, "#f43f5e");
+      sounds.playEnemyLaser();
+      this.cameras.main.shake(120, 0.007);
     });
 
     this.room.onMessage("player_damaged", (data: any) => {
