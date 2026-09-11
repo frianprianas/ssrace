@@ -1211,7 +1211,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top center;
+  object-position: center 22%;
   transition: transform 0.3s ease;
 }
 
@@ -1224,8 +1224,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
+  height: 25%;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.75), transparent);
 }
 
 .char-badge-id {
@@ -1426,33 +1426,85 @@ body {
     font-size: 0.92rem;
   }
 
+  /* Daftar Karakter di HP: Layout Horizontal Card Lebar agar Wajah & Nama Karakter Sangat Jelas dan Besar! */
   .character-selection-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    max-height: 52vh;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    max-height: 55vh;
     overflow-y: auto;
-    padding-right: 2px;
+    padding-right: 4px;
+  }
+
+  .char-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
   }
 
   .char-img-container {
-    height: 110px;
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #020617;
+    border: 2px solid var(--char-glow, rgba(255, 255, 255, 0.25));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .char-portrait {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 22%;
+    transform: none !important;
+  }
+
+  /* Hilangkan overlay hitam di HP agar wajah pilot 100% jernih, terang, dan tidak tertutup gradien! */
+  .char-img-overlay {
+    display: none !important;
+  }
+
+  .char-badge-id {
+    top: 4px;
+    left: 4px;
+    font-size: 0.62rem;
+    padding: 1px 5px;
+    background: rgba(0, 0, 0, 0.85);
   }
 
   .char-info-body {
-    padding: 6px;
+    padding: 0;
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
   }
 
+  /* NAMA KARAKTER BESAR, TEBAL, & MENYALA */
   .char-name-title {
-    font-size: 0.85rem;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    line-height: 1.15;
+    text-shadow: 0 0 10px var(--char-glow, rgba(0, 240, 255, 0.45));
   }
 
   .char-ship-name {
-    font-size: 0.62rem;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    font-weight: 700;
   }
 
   .char-role-tag {
-    font-size: 0.58rem;
-    padding: 1px 4px;
+    font-size: 0.64rem;
+    padding: 2px 6px;
+    margin: 2px 0 3px 0;
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
   }
 
   .char-desc-text {
@@ -1460,8 +1512,11 @@ body {
   }
 
   .char-select-btn {
-    padding: 5px 0;
-    font-size: 0.68rem;
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    border-radius: 6px;
   }
 
   .hangar-footer {

@@ -485,8 +485,22 @@ window.addEventListener("DOMContentLoaded", () => {
   const joinRoom = async (roomNumber: number) => {
     if (!currentAuthData) return;
     selectedRoomNumber = roomNumber;
+
+    // Langsung buka Modal Hangar seketika agar pemain tidak melihat kanvas game kosong di jeda koneksi
     showLobby(false);
     showModal(false);
+    if (modalHangar) modalHangar.style.display = "flex";
+    if (touchControls) touchControls.style.display = "none";
+    if (hangarSectorBadge) {
+      hangarSectorBadge.innerText = `SEKTOR ${selectedRoomNumber} • MEMASUKI HANGAR...`;
+    }
+    if (charSelectionGrid) {
+      charSelectionGrid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; color: #38bdf8; padding: 40px 10px; font-weight: 700; font-size: 1.05rem;">
+          ⏳ Memasuki Hangar Sektor ${selectedRoomNumber}...
+        </div>
+      `;
+    }
 
     if (btnChangeRoom) btnChangeRoom.style.display = "inline-block";
 
@@ -517,26 +531,21 @@ window.addEventListener("DOMContentLoaded", () => {
           hangarSectorBadge.innerText = `SEKTOR ${selectedRoomNumber} • HANGAR SKUADRON`;
         }
 
-        // Cek status room
-        if (activeColyseusRoom.state.status === "waiting") {
-          if (modalHangar) modalHangar.style.display = "flex";
-          if (touchControls) touchControls.style.display = "none";
-          renderHangarCards();
-        } else {
-          if (modalHangar) modalHangar.style.display = "none";
-          if (touchControls) touchControls.style.display = "flex";
-        }
+        // Tampilkan kartu pemilihan karakter langsung
+        if (modalHangar) modalHangar.style.display = "flex";
+        if (touchControls) touchControls.style.display = "none";
+        renderHangarCards();
 
         activeColyseusRoom.state.onChange(() => {
-          if (activeColyseusRoom.state.status === "waiting") {
+          const myPlayer = activeColyseusRoom.state.players.get(activeColyseusRoom.sessionId);
+          const hasChosenChar = myPlayer && myPlayer.characterId >= 0;
+
+          // Selama status waiting atau pemain belum pilih karakter, tetap di Hangar!
+          if (activeColyseusRoom.state.status === "waiting" || !hasChosenChar) {
             if (modalHangar) modalHangar.style.display = "flex";
             if (touchControls) touchControls.style.display = "none";
             renderHangarCards();
-          } else if (activeColyseusRoom.state.status === "starting") {
-            if (modalHangar) modalHangar.style.display = "none";
-            if (touchControls) touchControls.style.display = "flex";
-            sounds.startBgm();
-          } else if (activeColyseusRoom.state.status === "playing") {
+          } else if (activeColyseusRoom.state.status === "starting" || activeColyseusRoom.state.status === "playing") {
             if (modalHangar) modalHangar.style.display = "none";
             if (touchControls) touchControls.style.display = "flex";
             sounds.startBgm();
@@ -571,6 +580,7 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch (e: any) {
       console.error("Gagal masuk ke room:", e);
       alert(e.message || "Gagal masuk ke room.");
+      if (modalHangar) modalHangar.style.display = "none";
       showLobby(true);
     }
   };

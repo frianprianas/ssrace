@@ -288,7 +288,19 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.playerInputs.set(client.sessionId, { left: false, right: false, up: false, down: false, shoot: false });
     this.prevUpDown.set(client.sessionId, { up: false, down: false });
 
-    this.checkGameLifecycle();
+    // Jika ini adalah pemain pertama di room atau status sebelumnya finished/kosong,
+    // pastikan status room WAJIB dalam mode "waiting" untuk pemilihan karakter!
+    let activePlayers = 0;
+    this.state.players.forEach((p) => {
+      if (!p.isEliminated) activePlayers++;
+    });
+
+    if (activePlayers <= 1 || this.state.status === "finished") {
+      console.log(`[Room] Pemain pertama/baru di Sektor, pastikan status room WAITING untuk pemilihan karakter.`);
+      this.resetGame();
+    } else {
+      this.checkGameLifecycle();
+    }
   }
 
   onLeave(client: Client, consented?: boolean) {
@@ -1115,6 +1127,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       this.broadcast("return_to_lobby", {
         message: isVictory ? "Selamat! Alien TaYa Berhasil Dikalahkan! Mengalihkan ke Lobi..." : "Misi selesai. Mengalihkan ke Lobi..."
       });
+      this.resetGame();
     }, 7000);
   }
 
