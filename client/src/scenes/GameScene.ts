@@ -120,22 +120,33 @@ export class GameScene extends Phaser.Scene {
 
     // 3. Setup Touch Drag & Tap Langsung di Layar (Smartphone Touchscreen Support)
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      if (pointer.x > 400) {
+      sounds.unlockAudio();
+      // Hanya jika tap di area kanan atas canvas (bukan area kontrol touch D-Pad)
+      if (pointer.x > 480 && pointer.y < 460) {
         this.touchInput.shoot = true;
       }
     });
 
     this.input.on("pointerup", () => {
+      // Selalu batalkan arah geser begitu jari diangkat dari layar agar tidak over-steering!
+      this.touchInput.left = false;
+      this.touchInput.right = false;
       this.touchInput.shoot = false;
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (pointer.isDown && pointer.x <= 500) {
+      // Kendali geser halus dengan deadzone 35px agar tidak over-steering di smartphone
+      if (pointer.isDown && pointer.x <= 500 && pointer.y < 460) {
         const myPlayer = this.players.get(this.room?.sessionId || "");
         if (myPlayer) {
           const diff = pointer.x - myPlayer.container.x;
-          this.touchInput.left = diff < -15;
-          this.touchInput.right = diff > 15;
+          if (Math.abs(diff) > 35) {
+            this.touchInput.left = diff < 0;
+            this.touchInput.right = diff > 0;
+          } else {
+            this.touchInput.left = false;
+            this.touchInput.right = false;
+          }
         }
       }
     });
@@ -473,6 +484,25 @@ export class GameScene extends Phaser.Scene {
     this.eliminatedModal.add(hitZone);
   }
 
+  public cleanupEntities() {
+    this.players.forEach((p) => {
+      try { p.container.destroy(); } catch (e) {}
+    });
+    this.players.clear();
+    this.bullets.forEach((b) => {
+      try { b.sprite.destroy(); } catch (e) {}
+    });
+    this.bullets.clear();
+    this.coins.forEach((c) => {
+      try { c.container.destroy(); } catch (e) {}
+    });
+    this.coins.clear();
+    this.enemies.forEach((e) => {
+      try { e.container.destroy(); } catch (e) {}
+    });
+    this.enemies.clear();
+  }
+
   async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string }) {
     this.lastAuthOptions = authOptions;
     if (authOptions.serverUrl) this.serverUrl = authOptions.serverUrl;
@@ -480,6 +510,15 @@ export class GameScene extends Phaser.Scene {
     try {
       this.statusBadge.setText("MENGHUBUNGKAN KE SERVER...");
       this.statusBadge.setColor("#38bdf8");
+
+      // Bersihkan room dan objek sebelumnya secara menyeluruh agar tidak ada bekas kapal
+      if (this.room) {
+        try { this.room.leave(); } catch (e) {}
+      }
+      this.cleanupEntities();
+      if (this.eliminatedModal) this.eliminatedModal.setVisible(false);
+      if (this.modalContainer) this.modalContainer.setVisible(false);
+
       this.client = new Colyseus.Client(this.serverUrl);
 
       this.room = await this.client.joinOrCreate("race_room", {
@@ -504,12 +543,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async reconnect() {
+    if (this.eliminatedModal) this.eliminatedModal.setVisible(false);
+    this.cleanupEntities();
+
     if (this.lastAuthOptions) {
       try {
         await this.connectToServer(this.lastAuthOptions);
       } catch (e) {
         console.warn("Gagal auto-rejoin:", e);
-        // Tampilkan modal login web biasa
         const loginModal = document.getElementById("login-modal");
         if (loginModal) loginModal.style.display = "flex";
       }
@@ -603,7 +644,7 @@ export class GameScene extends Phaser.Scene {
       player.onChange(() => {
         playerData.targetX = player.x;
         playerData.targetY = player.y;
-        playerData.scoreText.setText(`${player.score}`);
+        playerData.scoreText.setText(`⭐ ${player.score}`);
 
         const currentHearts = "❤️".repeat(Math.max(0, player.hp)) + "🖤".repeat(Math.max(0, 3 - player.hp));
         playerData.hpText.setText(currentHearts);
@@ -612,6 +653,11 @@ export class GameScene extends Phaser.Scene {
           this.myScoreText.setText(`MATCH: ${player.score}`);
           this.myCumulativeText.setText(`TOTAL: ${player.cumulativeScore || 0}`);
           this.myHpText.setText(`NYAWA: ${currentHearts}`);
+
+          const badgeTotal = document.getElementById("badge-total-score");
+          if (badgeTotal) {
+            badgeTotal.innerText = `⭐ Total: ${((player.cumulativeScore || 0) + player.score).toLocaleString()} Poin`;
+          }
         }
 
         if (player.invulnerableTimer > 0) {
@@ -619,6 +665,8 @@ export class GameScene extends Phaser.Scene {
         } else {
           playerData.container.setAlpha(1.0);
         }
+
+        this.updateLeaderboard();
       });
     });
 
@@ -799,19 +847,21 @@ export class GameScene extends Phaser.Scene {
       this.spawnFloatingText(
         data.x, 
         data.y, 
-        `+${data.value} ${data.label}!`, 
+        `+${data.value} ${data.label}! (${data.playerName})`, 
         data.value === 100 ? "#facc15" : (data.value === 50 ? "#06b6d4" : "#f59e0b")
       );
 
       if (data.playerId === this.room.sessionId) {
         sounds.playCoin(data.value);
       }
+      this.updateLeaderboard();
     });
 
     this.room.onMessage("enemy_destroyed", (data: any) => {
       this.spawnFloatingText(data.x, data.y, `💥 +${data.points} HANCURKAN ${data.enemyName}!`, "#34d399");
       this.createExplosionEffect(data.x, data.y, false);
       sounds.playExplosion(false);
+      this.updateLeaderboard();
     });
 
     this.room.onMessage("enemy_shoot", () => {
@@ -833,6 +883,13 @@ export class GameScene extends Phaser.Scene {
       this.createBigExplosionEffect(data.x, data.y);
       sounds.playExplosion(true);
       this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} HANCUR LEBUR!`, "#f43f5e");
+
+      const elimP = this.players.get(data.playerId);
+      if (elimP) {
+        elimP.container.destroy();
+        this.players.delete(data.playerId);
+      }
+      this.updateLeaderboard();
     });
 
     // Khusus untuk pemain ini jika tereliminasi (3x terkena serangan)
@@ -840,6 +897,15 @@ export class GameScene extends Phaser.Scene {
       sounds.playExplosion(true);
       this.cameras.main.shake(450, 0.05);
       this.cameras.main.flash(350, 255, 0, 0);
+
+      // Hapus container kapal lokal seketika agar tidak tersisa di arena!
+      if (this.room) {
+        const myP = this.players.get(this.room.sessionId);
+        if (myP) {
+          myP.container.destroy();
+          this.players.delete(this.room.sessionId);
+        }
+      }
 
       this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 3x!");
       this.elimScoreText.setText(
@@ -849,6 +915,7 @@ export class GameScene extends Phaser.Scene {
       );
       this.eliminatedModal.setVisible(true);
       sounds.stopBgm();
+      this.updateLeaderboard();
     });
 
     this.room.onMessage("game_over", () => {

@@ -243,8 +243,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
     }
 
-    // 2. Update Pergerakan & Tembakan Pemain
-    const moveSpeedX = 330;
+    // 2. Update Pergerakan & Tembakan Pemain (Kecepatan geser 260 agar stabil di smartphone)
+    const moveSpeedX = 260;
     const playerRadius = 18;
 
     this.state.players.forEach((player, sessionId) => {
@@ -541,6 +541,12 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       y: player.y
     });
 
+    // Hapus pesawat pemain dari state permainan seketika agar objeknya lenyap dan tidak membekas di arena!
+    this.state.players.delete(sessionId);
+    this.playerInputs.delete(sessionId);
+    this.prevUpDown.delete(sessionId);
+    this.lastShootTimes.delete(sessionId);
+
     const client = this.clients.find(c => c.sessionId === sessionId);
     if (client) {
       // Kirim pesan langsung ke klien yang bersangkutan
@@ -552,13 +558,13 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         gamesPlayed: record.gamesPlayed
       });
 
-      // Beri jeda 1.2 detik agar animasi ledakan dan popup game over di klien terlihat
+      // Beri jeda 1 detik agar animasi ledakan dan popup game over di klien terlihat
       this.clock.setTimeout(() => {
         try {
-          console.log(`[Room] Menendang ${player.name} keluar room karena tereliminasi.`);
+          console.log(`[Room] Menendang socket ${player.name} keluar room karena tereliminasi.`);
           client.leave(4001); // 4001: Game Over / Eliminated
         } catch (e) {}
-      }, 1200);
+      }, 1000);
     }
 
     this.checkGameLifecycle();

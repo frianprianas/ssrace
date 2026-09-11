@@ -228,31 +228,37 @@ window.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById(elementId);
     if (!btn) return;
 
-    const startAction = (e: Event) => {
-      e.preventDefault();
-      const scene = getScene();
-      if (scene) scene.touchInput[actionKey] = true;
-    };
+  // Pastikan AudioContext smartphone aktif sejak sentuhan / interaksi pertama
+  window.addEventListener("touchstart", () => sounds.unlockAudio(), { passive: true });
+  window.addEventListener("touchend", () => sounds.unlockAudio(), { passive: true });
+  window.addEventListener("click", () => sounds.unlockAudio(), { passive: true });
 
-    const stopAction = (e: Event) => {
-      e.preventDefault();
-      const scene = getScene();
-      if (scene) scene.touchInput[actionKey] = false;
-    };
-
-    btn.addEventListener("touchstart", startAction, { passive: false });
-    btn.addEventListener("touchend", stopAction, { passive: false });
-    btn.addEventListener("touchcancel", stopAction, { passive: false });
-    btn.addEventListener("mousedown", startAction);
-    btn.addEventListener("mouseup", stopAction);
-    btn.addEventListener("mouseleave", stopAction);
+  const startAction = (e: Event) => {
+    e.preventDefault();
+    sounds.unlockAudio();
+    const scene = getScene();
+    if (scene) scene.touchInput[actionKey] = true;
   };
 
-  bindButtonTouch("touch-left", "left");
-  bindButtonTouch("touch-right", "right");
-  bindButtonTouch("touch-up", "up");
-  bindButtonTouch("touch-down", "down");
-  bindButtonTouch("touch-fire", "shoot");
+  const stopAction = (e: Event) => {
+    e.preventDefault();
+    const scene = getScene();
+    if (scene) scene.touchInput[actionKey] = false;
+  };
+
+  btn.addEventListener("touchstart", startAction, { passive: false });
+  btn.addEventListener("touchend", stopAction, { passive: false });
+  btn.addEventListener("touchcancel", stopAction, { passive: false });
+  btn.addEventListener("mousedown", startAction);
+  btn.addEventListener("mouseup", stopAction);
+  btn.addEventListener("mouseleave", stopAction);
+};
+
+bindButtonTouch("touch-left", "left");
+bindButtonTouch("touch-right", "right");
+bindButtonTouch("touch-up", "up");
+bindButtonTouch("touch-down", "down");
+bindButtonTouch("touch-fire", "shoot");
 
   // ==========================================
   // 🎵 AUDIO CONTROLS (BGM & SFX TOGGLE)

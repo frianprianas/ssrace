@@ -25,6 +25,25 @@ class SoundManager {
     }
   }
 
+  public unlockAudio() {
+    this.initCtx();
+    if (!this.ctx) return;
+
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume().then(() => {
+        console.log("[Audio] AudioContext aktif untuk smartphone!");
+      });
+    }
+
+    try {
+      const buffer = this.ctx.createBuffer(1, 1, 22050);
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.ctx.destination);
+      source.start(0);
+    } catch (e) {}
+  }
+
   // ==========================================
   // 🎵 PROCEDURAL RETRO SYNTHWAVE BGM ENGINE
   // ==========================================
