@@ -4,16 +4,23 @@ import { sounds } from "./sound";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
   parent: "game-container",
   backgroundColor: "#070913",
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 800,
+    height: 600
+  },
   physics: {
     default: "arcade",
     arcade: {
       gravity: { x: 0, y: 0 },
       debug: false
     }
+  },
+  input: {
+    activePointers: 3 // Dukungan multi-touch gesture smartphone
   },
   scene: [GameScene]
 };
@@ -35,7 +42,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const badgeEmail = document.getElementById("badge-email") as HTMLSpanElement;
   const btnLogout = document.getElementById("btn-logout") as HTMLButtonElement;
   const btnOpenLogin = document.getElementById("btn-open-login") as HTMLButtonElement;
-  const btnSound = document.getElementById("btn-sound") as HTMLButtonElement;
+  const btnBgm = document.getElementById("btn-bgm") as HTMLButtonElement;
+  const btnSfx = document.getElementById("btn-sfx") as HTMLButtonElement;
 
   // Inisialisasi Server URL dari host browser otomatis
   if (inputServer) {
@@ -88,7 +96,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const serverUrl = inputServer.value.trim() || "ws://localhost:2567";
       const rawUser = inputUsername.value.trim().toLowerCase();
-      // Bersihkan jika user tidak sengaja mengetik @smk...
       const username = rawUser.includes("@") ? rawUser.split("@")[0] : rawUser;
       const fullEmail = `${username}@smk.baktinusantara666.sch.id`;
       const password = inputPassword.value;
@@ -103,7 +110,6 @@ window.addEventListener("DOMContentLoaded", () => {
           password 
         });
 
-        // Simpan sesi username
         localStorage.setItem("baknus_username", username);
         showModal(false);
         updateSessionUI(fullEmail, username);
@@ -127,6 +133,7 @@ window.addEventListener("DOMContentLoaded", () => {
         try {
           await scene.connectToServer({ serverUrl, token: ssoToken });
           const fullEmail = savedUsername ? `${savedUsername}@smk.baktinusantara666.sch.id` : "Karyawan Baknus";
+          showModal(false);
           updateSessionUI(fullEmail, savedUsername || "Karyawan");
         } catch (e) {
           console.warn("SSO Token kedaluwarsa, tampilkan modal login.", e);
@@ -151,12 +158,59 @@ window.addEventListener("DOMContentLoaded", () => {
     btnOpenLogin.addEventListener("click", () => showModal(true));
   }
 
-  // Toggle Sound
-  if (btnSound) {
-    btnSound.addEventListener("click", () => {
-      sounds.enabled = !sounds.enabled;
-      btnSound.innerText = sounds.enabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
-      btnSound.style.opacity = sounds.enabled ? "1" : "0.6";
+  // ==========================================
+  // 📱 BIND VIRTUAL TOUCH CONTROLS (SMARTPHONE)
+  // ==========================================
+  const getScene = (): GameScene | undefined => {
+    return game.scene.getScene("GameScene") as GameScene;
+  };
+
+  const bindButtonTouch = (elementId: string, actionKey: "left" | "right" | "up" | "down" | "shoot") => {
+    const btn = document.getElementById(elementId);
+    if (!btn) return;
+
+    const startAction = (e: Event) => {
+      e.preventDefault();
+      const scene = getScene();
+      if (scene) scene.touchInput[actionKey] = true;
+    };
+
+    const stopAction = (e: Event) => {
+      e.preventDefault();
+      const scene = getScene();
+      if (scene) scene.touchInput[actionKey] = false;
+    };
+
+    btn.addEventListener("touchstart", startAction, { passive: false });
+    btn.addEventListener("touchend", stopAction, { passive: false });
+    btn.addEventListener("touchcancel", stopAction, { passive: false });
+    btn.addEventListener("mousedown", startAction);
+    btn.addEventListener("mouseup", stopAction);
+    btn.addEventListener("mouseleave", stopAction);
+  };
+
+  bindButtonTouch("touch-left", "left");
+  bindButtonTouch("touch-right", "right");
+  bindButtonTouch("touch-up", "up");
+  bindButtonTouch("touch-down", "down");
+  bindButtonTouch("touch-fire", "shoot");
+
+  // ==========================================
+  // 🎵 AUDIO CONTROLS (BGM & SFX TOGGLE)
+  // ==========================================
+  if (btnBgm) {
+    btnBgm.addEventListener("click", () => {
+      const active = sounds.toggleBgm();
+      btnBgm.innerText = active ? "🎵 BGM: ON" : "🔇 BGM: OFF";
+      btnBgm.style.opacity = active ? "1" : "0.6";
+    });
+  }
+
+  if (btnSfx) {
+    btnSfx.addEventListener("click", () => {
+      const active = sounds.toggleSfx();
+      btnSfx.innerText = active ? "🔊 SFX: ON" : "🔇 SFX: OFF";
+      btnSfx.style.opacity = active ? "1" : "0.6";
     });
   }
 });

@@ -173,9 +173,25 @@ git push -u origin main
 
 ---
 
-## 🎮 7. Kontrol Game (Space Shooter Style)
+## 🎮 7. Kontrol Game (Desktop & Smartphone Touchscreen)
+
+### Kontrol PC / Laptop:
 - **A / D atau Panah Kiri / Kanan:** Menggeser posisi pesawat ke kiri dan ke kanan secara lincah.
-- **W / S atau Panah Atas / Bawah:** Maju / Mundur (3 langkah vertikal: Depan, Tengah, Belakang) agar pemain tidak saling berebut garis dan tidak berdesak-desakan.
-- **SPASI atau KLIK MOUSE:** Menembakkan laser ke atas untuk menghancurkan musuh korporat yang meluncur turun (+40 Poin).
-- **Tabrakan Antar Pemain:** Pesawat bersifat padat (*solid*); jika saling bersenggolan dengan pemain lain, kedua pesawat akan terpental elastis menjauh sehingga tidak tumpang tindih.
-- **Tombol Audio:** Toggle suara efek laser, ledakan, koin, dan sirine di bagian bawah canvas.
+- **W / S atau Panah Atas / Bawah:** Maju / Mundur (3 langkah vertikal: Depan, Tengah, Belakang) agar tidak berdesak-desakan.
+- **SPASI atau KLIK MOUSE:** Menembakkan laser ke atas untuk menghancurkan musuh korporat (+40 Poin).
+
+### Kontrol Layar Sentuh Smartphone (Mobile-Friendly 📱):
+- **D-Pad Virtual Kiri:**
+  - Tombol **`◄`** dan **`►`** (ukuran besar): Geser pesawat ke kiri dan kanan.
+  - Tombol **`▲ MAJU`** dan **`▼ MUNDUR`**: Berpindah 3 tingkat baris vertikal.
+- **Tombol Sentuh Kanan:**
+  - Tombol **`🔥 TEMBAK`** (lingkaran merah berdenyut): Menembakkan laser secara instan.
+- **Touch Gesture Langsung di Canvas:**
+  - Cukup sentuh dan geser jari (*drag*) di layar untuk mengarahkan pesawat.
+  - Ketuk (*tap*) di layar kanan untuk menembakkan laser.
+- **Responsive Auto-Scale:** Canvas game otomatis menyesuaikan ukuran layar HP secara proporsional (*aspect ratio fit*).
+
+### 🎵 Musik & Audio Lengkap (Web Audio API):
+- **BGM Musik Arcade Synthwave:** Melodi dan bassline bertempo 130 BPM bernuansa arcade retro korporat yang berputar otomatis saat ronde dimulai.
+- **Efek Suara (SFX):** Suara laser futuristik, dentuman ledakan musuh, arpeggio denting koin emas/tunjangan/lembur, getaran tabrakan, dan melodi juara.
+- **Pengaturan Suara:** Tersedia tombol toggle **`🎵 BGM: ON/OFF`** dan **`🔊 SFX: ON/OFF`** terpisah di footer layar.

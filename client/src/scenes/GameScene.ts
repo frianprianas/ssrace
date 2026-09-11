@@ -63,6 +63,9 @@ export class GameScene extends Phaser.Scene {
   private inputSendTimer: number = 0;
   private localShootCooldown: number = 0;
 
+  // Touch input dari smartphone
+  public touchInput = { left: false, right: false, up: false, down: false, shoot: false };
+
   // HUD Elements
   private timerText!: Phaser.GameObjects.Text;
   private statusBadge!: Phaser.GameObjects.Text;
@@ -104,10 +107,34 @@ export class GameScene extends Phaser.Scene {
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
-    // 3. Setup UI HUD
+    // 3. Setup Touch Drag & Tap Langsung di Layar (Smartphone Touchscreen Support)
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      // Tap di separuh kanan layar untuk menembak
+      if (pointer.x > 400) {
+        this.touchInput.shoot = true;
+      }
+    });
+
+    this.input.on("pointerup", () => {
+      this.touchInput.shoot = false;
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.isDown && pointer.x <= 500) {
+        // Drag horizontal mengarahkan pesawat lokal
+        const myPlayer = this.players.get(this.room?.sessionId || "");
+        if (myPlayer) {
+          const diff = pointer.x - myPlayer.container.x;
+          this.touchInput.left = diff < -15;
+          this.touchInput.right = diff > 15;
+        }
+      }
+    });
+
+    // 4. Setup UI HUD
     this.createHUD();
 
-    // 4. Status Awal Menunggu Login
+    // 5. Status Awal Menunggu Login
     this.statusBadge.setText("MENUNGGU LOGIN BAKNUS MAIL");
     this.statusBadge.setColor("#f59e0b");
   }
@@ -115,95 +142,120 @@ export class GameScene extends Phaser.Scene {
   private initStarfield() {
     this.starGraphics = this.add.graphics().setDepth(1);
     this.stars = [];
-    for (let i = 0; i < 75; i++) {
+    for (let i = 0; i < 90; i++) {
       this.stars.push({
         x: Math.random() * 800,
         y: Math.random() * 600,
-        speed: 40 + Math.random() * 120,
-        size: Math.random() < 0.2 ? 2.5 : (Math.random() < 0.6 ? 1.8 : 1),
+        speed: 40 + Math.random() * 160,
+        size: Math.random() < 0.25 ? 2.5 : (Math.random() < 0.6 ? 1.8 : 1),
         alpha: 0.3 + Math.random() * 0.7,
       });
     }
 
-    // Garis pertahanan bawah (zona pergerakan pemain)
+    // Garis pertahanan neon bawah
     const defLine = this.add.graphics().setDepth(2);
-    defLine.lineStyle(1, 0x00f0ff, 0.25);
+    defLine.lineStyle(1.5, 0x00f0ff, 0.35);
     defLine.lineBetween(0, 440, 800, 440);
-    defLine.lineStyle(1, 0x334155, 0.4);
+    defLine.lineStyle(1, 0x334155, 0.5);
     defLine.lineBetween(0, 560, 800, 560);
   }
 
   private createProceduralTextures() {
-    // 1. Pesawat Pemain Lokal (Space Jet Menghadap Atas)
+    // 1. Pesawat Pemain Lokal (CYAN ULTRA FIGHTER)
     const gPlayer = this.make.graphics({ x: 0, y: 0 });
-    // Sayap jet
-    gPlayer.fillStyle(0x00d2ff, 1);
-    gPlayer.fillTriangle(14, 0, 0, 26, 7, 20);
-    gPlayer.fillTriangle(14, 0, 21, 20, 28, 26);
-    // Bodi utama
+    // Halo energi
+    gPlayer.lineStyle(2, 0x00f0ff, 0.4);
+    gPlayer.strokeCircle(16, 16, 15);
+    // Sayap jet tajam
+    gPlayer.fillStyle(0x0284c7, 1);
+    gPlayer.fillTriangle(16, 0, 0, 30, 8, 22);
+    gPlayer.fillTriangle(16, 0, 24, 22, 32, 30);
+    // Bodi utama putih berkilau
     gPlayer.fillStyle(0xffffff, 1);
-    gPlayer.fillTriangle(14, 2, 8, 24, 20, 24);
-    // Kokpit cyan
+    gPlayer.fillTriangle(16, 2, 9, 26, 23, 26);
+    // Garis aksen cyan
     gPlayer.fillStyle(0x00f0ff, 1);
-    gPlayer.fillCircle(14, 11, 3.5);
-    gPlayer.generateTexture("space_jet_local", 28, 28);
+    gPlayer.fillRect(14, 10, 4, 12);
+    // Kokpit neon
+    gPlayer.fillStyle(0x38bdf8, 1);
+    gPlayer.fillCircle(16, 12, 3.5);
+    gPlayer.generateTexture("space_jet_local", 32, 32);
 
-    // 2. Pesawat Pemain Lain (Warna Berbeda)
-    const colors = [0xff3366, 0x10b981, 0xa855f7, 0xf59e0b, 0xec4899];
-    colors.forEach((col, idx) => {
+    // 2. Pesawat Pemain Lain (5 Palet Warna Kontras)
+    const palettes = [
+      { wing: 0xd97706, body: 0xffedd5, accent: 0xf59e0b }, // 0: Solar Orange / Amber
+      { wing: 0x059669, body: 0xd1fae5, accent: 0x10b981 }, // 1: Cyber Emerald / Mint
+      { wing: 0x7c3aed, body: 0xede9fe, accent: 0xa855f7 }, // 2: Royal Amethyst / Purple
+      { wing: 0xe11d48, body: 0xffe4e6, accent: 0xf43f5e }, // 3: Crimson Red / Rose
+      { wing: 0x0891b2, body: 0xcffafe, accent: 0x06b6d4 }  // 4: Electric Blue / Teal
+    ];
+
+    palettes.forEach((pal, idx) => {
       const g = this.make.graphics({ x: 0, y: 0 });
-      g.fillStyle(col, 1);
-      g.fillTriangle(14, 0, 0, 26, 7, 20);
-      g.fillTriangle(14, 0, 21, 20, 28, 26);
-      g.fillStyle(0xe2e8f0, 1);
-      g.fillTriangle(14, 2, 8, 24, 20, 24);
-      g.fillStyle(col, 1);
-      g.fillCircle(14, 11, 3.5);
-      g.generateTexture(`space_jet_remote_${idx}`, 28, 28);
+      // Sayap
+      g.fillStyle(pal.wing, 1);
+      g.fillTriangle(16, 0, 0, 30, 8, 22);
+      g.fillTriangle(16, 0, 24, 22, 32, 30);
+      // Bodi
+      g.fillStyle(pal.body, 1);
+      g.fillTriangle(16, 2, 9, 26, 23, 26);
+      // Aksen
+      g.fillStyle(pal.accent, 1);
+      g.fillRect(14, 10, 4, 12);
+      g.fillCircle(16, 12, 3.5);
+      g.generateTexture(`space_jet_remote_${idx}`, 32, 32);
     });
 
-    // 3. Exhaust Api Mesin (Di bagian bawah pesawat)
+    // 3. Exhaust Api Mesin Ganda
     const gExhaust = this.make.graphics({ x: 0, y: 0 });
     gExhaust.fillStyle(0x00f0ff, 0.9);
-    gExhaust.fillTriangle(4, 0, 0, 10, 8, 10);
+    gExhaust.fillTriangle(2, 0, 0, 10, 4, 10);
+    gExhaust.fillTriangle(8, 0, 6, 10, 10, 10);
     gExhaust.fillStyle(0xffffff, 1);
-    gExhaust.fillTriangle(4, 0, 2, 6, 6, 6);
-    gExhaust.generateTexture("exhaust_flame", 8, 10);
+    gExhaust.fillTriangle(2, 0, 1, 6, 3, 6);
+    gExhaust.fillTriangle(8, 0, 7, 6, 9, 6);
+    gExhaust.generateTexture("exhaust_flame", 12, 10);
 
-    // 4. Koin 25 - Uang Lembur
+    // 4. Koin 25 - Uang Lembur (Oranye / Tembaga Berkilau)
     const gCoin25 = this.make.graphics({ x: 0, y: 0 });
     gCoin25.fillStyle(0xf59e0b, 1);
-    gCoin25.fillCircle(13, 13, 12);
-    gCoin25.lineStyle(2, 0xffedd5, 0.9);
-    gCoin25.strokeCircle(13, 13, 12);
-    gCoin25.generateTexture("coin_25", 26, 26);
+    gCoin25.fillCircle(14, 14, 13);
+    gCoin25.lineStyle(2, 0xffedd5, 1);
+    gCoin25.strokeCircle(14, 14, 13);
+    gCoin25.lineStyle(1.5, 0xd97706, 0.8);
+    gCoin25.strokeCircle(14, 14, 8);
+    gCoin25.generateTexture("coin_25", 28, 28);
 
-    // 5. Koin 50 - Tunjangan
+    // 5. Koin 50 - Tunjangan (Cyan / Perak)
     const gCoin50 = this.make.graphics({ x: 0, y: 0 });
     gCoin50.fillStyle(0x06b6d4, 1);
-    gCoin50.fillCircle(15, 15, 14);
-    gCoin50.lineStyle(2, 0xe0f2fe, 0.95);
-    gCoin50.strokeCircle(15, 15, 14);
-    gCoin50.generateTexture("coin_50", 30, 30);
+    gCoin50.fillCircle(16, 16, 15);
+    gCoin50.lineStyle(2.5, 0xe0f2fe, 1);
+    gCoin50.strokeCircle(16, 16, 15);
+    gCoin50.lineStyle(1.5, 0x0891b2, 0.8);
+    gCoin50.strokeCircle(16, 16, 9);
+    gCoin50.generateTexture("coin_50", 32, 32);
 
-    // 6. Koin 100 - Bonus KPI
+    // 6. Koin 100 - Bonus KPI (Bintang Emas Bersinar)
     const gCoin100 = this.make.graphics({ x: 0, y: 0 });
     gCoin100.fillStyle(0xeab308, 1);
-    gCoin100.fillCircle(17, 17, 16);
+    gCoin100.fillCircle(18, 18, 17);
     gCoin100.lineStyle(3, 0xfef08a, 1);
-    gCoin100.strokeCircle(17, 17, 16);
-    gCoin100.generateTexture("coin_100", 34, 34);
+    gCoin100.strokeCircle(18, 18, 17);
+    gCoin100.fillStyle(0xfef08a, 0.85);
+    gCoin100.fillCircle(18, 18, 7);
+    gCoin100.generateTexture("coin_100", 36, 36);
 
-    // 7. Musuh Korporat (Alien / Hazard Drone Meluncur Turun)
+    // 7. Musuh Korporat (Hazard Drone Berduri)
     const gEnemy = this.make.graphics({ x: 0, y: 0 });
     gEnemy.fillStyle(0xef4444, 1);
-    gEnemy.fillCircle(22, 22, 20);
-    gEnemy.lineStyle(3, 0xffffff, 0.9);
-    gEnemy.strokeCircle(22, 22, 20);
-    gEnemy.lineStyle(3, 0x7f1d1d, 1);
-    gEnemy.lineBetween(14, 14, 30, 30);
-    gEnemy.lineBetween(30, 14, 14, 30);
-    gEnemy.generateTexture("enemy_alien", 44, 44);
+    gEnemy.fillCircle(24, 24, 21);
+    gEnemy.lineStyle(3, 0xffffff, 0.95);
+    gEnemy.strokeCircle(24, 24, 21);
+    gEnemy.lineStyle(3.5, 0x7f1d1d, 1);
+    gEnemy.lineBetween(14, 14, 34, 34);
+    gEnemy.lineBetween(34, 14, 14, 34);
+    gEnemy.generateTexture("enemy_alien", 48, 48);
   }
 
   private createHUD() {
@@ -520,16 +572,19 @@ export class GameScene extends Phaser.Scene {
         this.statusBadge.setColor("#38bdf8");
         this.timerText.setText("STANDBY");
         this.modalContainer.setVisible(false);
+        sounds.stopBgm();
       } else if (status === "playing") {
         this.statusBadge.setText(`SURVIVAL AKTIF (${totalPlayers}/5)`);
         this.statusBadge.setColor("#10b981");
         this.timerText.setText(`WAKTU: ${this.room.state.countdown}s`);
         this.modalContainer.setVisible(false);
+        sounds.startBgm();
       } else if (status === "finished") {
         this.statusBadge.setText("SELESAI");
         this.statusBadge.setColor("#ffd700");
         this.modalWinner.setText(`Karyawan Teladan:\n⭐ ${this.room.state.winnerName} ⭐\nSkor Akhir: ${this.room.state.winnerScore}`);
         this.modalContainer.setVisible(true);
+        sounds.stopBgm();
       }
 
       this.updateLeaderboard();
@@ -655,13 +710,13 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    // 2. Tangkap Input Pemain Lokal
-    if (this.room && this.cursors) {
-      const left = this.cursors.left.isDown || this.wasd.left.isDown;
-      const right = this.cursors.right.isDown || this.wasd.right.isDown;
-      const up = this.cursors.up.isDown || this.wasd.up.isDown;
-      const down = this.cursors.down.isDown || this.wasd.down.isDown;
-      const shoot = (this.spaceKey && this.spaceKey.isDown) || this.input.activePointer.isDown;
+    // 2. Tangkap Input Pemain Lokal (Keyboard & Virtual Touch Controls)
+    if (this.room) {
+      const left = (this.cursors?.left.isDown || this.wasd?.left.isDown || this.touchInput.left);
+      const right = (this.cursors?.right.isDown || this.wasd?.right.isDown || this.touchInput.right);
+      const up = (this.cursors?.up.isDown || this.wasd?.up.isDown || this.touchInput.up);
+      const down = (this.cursors?.down.isDown || this.wasd?.down.isDown || this.touchInput.down);
+      const shoot = (this.spaceKey?.isDown || this.touchInput.shoot);
 
       if (this.localShootCooldown > 0) {
         this.localShootCooldown -= dtSec;
