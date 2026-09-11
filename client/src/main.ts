@@ -302,7 +302,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const hangarStatusTitle = document.getElementById("hangar-status-title") as HTMLDivElement;
   const hangarStatusDesc = document.getElementById("hangar-status-desc") as HTMLDivElement;
   const btnLeaveHangar = document.getElementById("btn-leave-hangar") as HTMLButtonElement;
-  const btnStartBattle = document.getElementById("btn-start-battle") as HTMLButtonElement;
 
   let activeColyseusRoom: any = null;
 
@@ -381,12 +380,15 @@ window.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // Update status footer & tombol START
-    if (totalPlayers > 0 && readyCount === totalPlayers) {
-      if (btnStartBattle) {
-        btnStartBattle.disabled = false;
-        btnStartBattle.innerText = "🚀 MULAI PERTEMPURAN (START)";
-      }
+    // Update status footer & sinkronisasi SEMUA tombol START (bawah & atas smartphone)
+    const isAllReady = (totalPlayers > 0 && readyCount === totalPlayers);
+    const allStartButtons = document.querySelectorAll(".btn-start-battle-sync") as NodeListOf<HTMLButtonElement>;
+    allStartButtons.forEach((btn) => {
+      btn.disabled = !isAllReady;
+      btn.innerText = isAllReady ? "🚀 MULAI PERTEMPURAN (START)" : "⏳ MENUNGGU SEMUA PILOT SIAP";
+    });
+
+    if (isAllReady) {
       if (hangarStatusTitle) {
         hangarStatusTitle.innerText = "SEMUA PILOT TELAH SIAP!";
         hangarStatusTitle.style.color = "#10b981";
@@ -395,10 +397,6 @@ window.addEventListener("DOMContentLoaded", () => {
         hangarStatusDesc.innerText = "Seluruh pilot skuadron telah memilih karakter. Siapa saja dapat menekan tombol START untuk meluncur!";
       }
     } else {
-      if (btnStartBattle) {
-        btnStartBattle.disabled = true;
-        btnStartBattle.innerText = "⏳ MENUNGGU SEMUA PILOT SIAP";
-      }
       if (hangarStatusTitle) {
         hangarStatusTitle.style.color = "#38bdf8";
         if (myCharId < 0) {
@@ -417,14 +415,15 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  if (btnStartBattle) {
-    btnStartBattle.addEventListener("click", () => {
+  // Pasang click listener ke SEMUA tombol START (footer dan mobile action bar)
+  document.querySelectorAll(".btn-start-battle-sync").forEach((btn) => {
+    btn.addEventListener("click", () => {
       sounds.unlockAudio();
       if (activeColyseusRoom) {
         activeColyseusRoom.send("start_game");
       }
     });
-  }
+  });
 
   if (btnLeaveHangar) {
     btnLeaveHangar.addEventListener("click", () => {
@@ -436,6 +435,52 @@ window.addEventListener("DOMContentLoaded", () => {
       showLobby(true);
     });
   }
+
+  // ==========================================
+  // 💥 KONTROL SENJATA PAMUNGKAS "BOOM" (EMP PLASMA)
+  // ==========================================
+  const btnBomb = document.getElementById("touch-bomb") as HTMLButtonElement;
+  const bombCooldownOverlay = document.getElementById("bomb-cooldown-overlay") as HTMLDivElement;
+  const bombCooldownBadge = document.getElementById("bomb-cooldown-badge") as HTMLSpanElement;
+
+  const BOMB_MAX_COOLDOWN = 15; // 15 detik
+  let bombCooldownSeconds = 0; // Siap saat game mulai
+
+  const updateBombUI = () => {
+    if (!btnBomb || !bombCooldownOverlay || !bombCooldownBadge) return;
+    if (bombCooldownSeconds <= 0) {
+      btnBomb.disabled = false;
+      btnBomb.classList.add("ready");
+      bombCooldownOverlay.style.height = "0%";
+      bombCooldownBadge.innerText = "SIAP";
+    } else {
+      btnBomb.disabled = true;
+      btnBomb.classList.remove("ready");
+      const pct = (bombCooldownSeconds / BOMB_MAX_COOLDOWN) * 100;
+      bombCooldownOverlay.style.height = `${pct}%`;
+      bombCooldownBadge.innerText = `${Math.ceil(bombCooldownSeconds)}s`;
+    }
+  };
+
+  const triggerUseBomb = () => {
+    if (bombCooldownSeconds > 0) return;
+    if (!activeColyseusRoom || activeColyseusRoom.state.status !== "playing") return;
+
+    sounds.unlockAudio();
+    activeColyseusRoom.send("use_bomb");
+    bombCooldownSeconds = BOMB_MAX_COOLDOWN;
+    updateBombUI();
+  };
+
+  // Timer cooldown 100ms
+  setInterval(() => {
+    if (activeColyseusRoom && activeColyseusRoom.state.status === "playing") {
+      if (bombCooldownSeconds > 0) {
+        bombCooldownSeconds = Math.max(0, bombCooldownSeconds - 0.1);
+        updateBombUI();
+      }
+    }
+  }, 100);
 
   const joinRoom = async (roomNumber: number) => {
     if (!currentAuthData) return;
@@ -454,6 +499,19 @@ window.addEventListener("DOMContentLoaded", () => {
         });
 
         activeColyseusRoom = conn.room;
+
+        // Pasang callback saat pemain atau game meminta kembali ke Lobby
+        scene.onReturnToLobby = () => {
+          if (modalHangar) modalHangar.style.display = "none";
+          if (touchControls) touchControls.style.display = "none";
+          if (activeColyseusRoom) {
+            try { activeColyseusRoom.leave(); } catch (e) {}
+            activeColyseusRoom = null;
+          }
+          scene.cleanupEntities();
+          showLobby(true);
+          fetchRooms();
+        };
 
         if (hangarSectorBadge) {
           hangarSectorBadge.innerText = `SEKTOR ${selectedRoomNumber} • HANGAR SKUADRON`;
@@ -506,6 +564,8 @@ window.addEventListener("DOMContentLoaded", () => {
           if (modalHangar) modalHangar.style.display = "none";
           if (touchControls) touchControls.style.display = "flex";
           sounds.startBgm();
+          bombCooldownSeconds = 0;
+          updateBombUI();
         });
       }
     } catch (e: any) {
@@ -795,6 +855,27 @@ window.addEventListener("DOMContentLoaded", () => {
     btnFire.addEventListener("mouseup", stopShoot);
     btnFire.addEventListener("mouseleave", stopShoot);
   }
+
+  // Tombol Bom Gelombang EMP Plasma (BOOM Glass Button)
+  if (btnBomb) {
+    btnBomb.addEventListener("pointerdown", (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerUseBomb();
+    });
+    btnBomb.addEventListener("click", (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerUseBomb();
+    });
+  }
+
+  // Shortcut Keyboard "B" untuk meledakkan BOOM EMP di PC / Laptop
+  window.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.code === "KeyB") {
+      triggerUseBomb();
+    }
+  });
 
   // ==========================================
   // 🎵 AUDIO CONTROLS (BGM & SFX TOGGLE)

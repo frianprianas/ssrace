@@ -65,6 +65,8 @@ export class PlaneRaceState extends Schema {
   @type([ Enemy ]) enemies = new ArraySchema<Enemy>();
   @type("string") winnerName: string = "";
   @type("number") winnerScore: number = 0;
+  @type("boolean") isVictory: boolean = false;
+  @type("string") victoryMessage: string = "";
 
   // Kapal Induk Alien Planet TaYa (Boss Pertempuran Akhir)
   @type("boolean") bossActive: boolean = false;

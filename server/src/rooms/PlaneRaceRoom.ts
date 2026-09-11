@@ -33,6 +33,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
   private fastEnemyTimer: number = 0;
   private fastEnemyIndex: number = 0;
   private startCountdownTimer: any = null;
+  private lastBombTimes: Map<string, number> = new Map();
   private fastEnemyNames = [
     "",
     "",
@@ -178,6 +179,76 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       });
     });
 
+    // Senjata Pamungkas: EMP Plasma BOOM (Terisi setiap 15 detik)
+    this.onMessage("use_bomb", (client) => {
+      if (this.state.status !== "playing") return;
+      const player = this.state.players.get(client.sessionId);
+      if (!player || player.isEliminated) return;
+
+      const now = Date.now();
+      const lastBomb = this.lastBombTimes.get(client.sessionId) || 0;
+      if (now - lastBomb < 14500) {
+        // Cooldown masih berjalan
+        return;
+      }
+      this.lastBombTimes.set(client.sessionId, now);
+
+      console.log(`[Room] 💥 EMP PLASMA BOOM diledakkan oleh ${player.name}!`);
+
+      // 1. Musnahkan SEMUA peluru musuh di seluruh arena pertempuran
+      let bulletsCleared = 0;
+      for (let i = this.state.bullets.length - 1; i >= 0; i--) {
+        const b = this.state.bullets[i];
+        if (b && b.isEnemy) {
+          this.state.bullets.splice(i, 1);
+          bulletsCleared++;
+        }
+      }
+
+      // 2. Musnahkan SEMUA pesawat musuh alien biasa yang sedang ada di layar
+      let enemiesDestroyed = 0;
+      let gainedScore = 0;
+      this.state.enemies.forEach((enemy) => {
+        if (enemy.y > -50) {
+          enemiesDestroyed++;
+          const isFast = enemy.id === "enemy_fast_diver";
+          gainedScore += (isFast ? 80 : 50);
+
+          if (isFast) {
+            enemy.y = -800;
+            enemy.speedY = 0;
+            enemy.speedX = 0;
+          } else {
+            this.respawnEnemy(enemy, undefined, 95);
+          }
+        }
+      });
+
+      // 3. Berikan damage masif ke Kapal Induk Alien jika sedang aktif
+      let bossHit = false;
+      if (this.state.bossActive && this.state.bossY > -50) {
+        this.state.bossHp = Math.max(0, this.state.bossHp - 15);
+        gainedScore += 150;
+        bossHit = true;
+        if (this.state.bossHp <= 0) {
+          this.onBossDefeated(player.name, client.sessionId);
+        }
+      }
+
+      player.score += gainedScore;
+
+      // Broadcast efek dahsyat BOOM ke seluruh klien
+      this.broadcast("bomb_exploded", {
+        playerId: client.sessionId,
+        playerName: player.name,
+        bulletsCleared,
+        enemiesDestroyed,
+        bossHit,
+        bossHp: this.state.bossHp,
+        bossMaxHp: this.state.bossMaxHp
+      });
+    });
+
     // Update loop 50 FPS (20ms)
     this.setSimulationInterval((deltaTime) => this.update(deltaTime), 1000 / 50);
   }
@@ -245,6 +316,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.playerInputs.clear();
     this.prevUpDown.clear();
     this.lastShootTimes.clear();
+    this.lastBombTimes.clear();
     this.playerBumpTimes.clear();
   }
 
@@ -724,24 +796,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
             });
 
             if (this.state.bossHp <= 0) {
-              this.state.bossActive = false;
-              if (shooter && !shooter.isEliminated) {
-                shooter.score += 600; // Bonus besar penghancur kapal induk
-              }
-              // Bonus kontribusi tim untuk semua pilot yang bertahan
-              this.state.players.forEach((p) => {
-                if (!p.isEliminated && p.id !== b.playerId) {
-                  p.score += 300;
-                }
-              });
-
-              this.broadcast("boss_defeated", {
-                x: this.state.bossX,
-                y: this.state.bossY,
-                killerId: b.playerId,
-                killerName: shooter ? shooter.name : "Skuadron Pertahanan Bumi"
-              });
-              console.log(`[Room] 💥 KAPAL INDUK PLANET TAYA HANCUR oleh ${shooter ? shooter.name : "Pilot"}!`);
+              this.onBossDefeated(shooter ? shooter.name : "Skuadron Pertahanan Bumi", b.playerId);
             }
 
             this.state.bullets.splice(i, 1);
@@ -991,14 +1046,46 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.checkGameLifecycle();
   }
 
-  private endGame() {
+  private onBossDefeated(killerName: string, killerId: string) {
+    if (!this.state.bossActive && this.state.status === "finished") return;
+    this.state.bossActive = false;
+
+    const shooter = this.state.players.get(killerId);
+    if (shooter && !shooter.isEliminated) {
+      shooter.score += 800; // Bonus besar penakluk kapal induk
+    }
+
+    // Bonus kontribusi tim untuk seluruh pilot yang bertahan
+    this.state.players.forEach((p) => {
+      if (!p.isEliminated && p.id !== killerId) {
+        p.score += 400;
+      }
+    });
+
+    this.broadcast("boss_defeated", {
+      x: this.state.bossX,
+      y: this.state.bossY,
+      killerId: killerId,
+      killerName: killerName
+    });
+
+    console.log(`[Room] 💥 KAPAL INDUK ALIEN PLANET TAYA HANCUR TOTAL oleh ${killerName}!`);
+
+    // Level Berhasil! Alien TaYa Berhasil Dikalahkan -> Selesaikan game & kembalikan ke lobi
+    this.endGame(true, "Selamat! Alien TaYa Berhasil Dikalahkan!");
+  }
+
+  private endGame(isVictory: boolean = false, victoryMsg: string = "") {
+    if (this.state.status === "finished") return;
     this.state.status = "finished";
+    this.state.isVictory = isVictory;
+    this.state.victoryMessage = victoryMsg || (isVictory ? "Selamat! Alien TaYa Berhasil Dikalahkan!" : "Waktu Pertempuran Berakhir!");
     this.finishedTimer = 0;
 
     let topScore = -1;
     let winner = "Tidak Ada";
 
-    // Akumulasikan skor seluruh pemain yang bertahan ke database
+    // Akumulasikan skor seluruh pemain yang bertahan ke database persisten
     this.state.players.forEach((p) => {
       if (!p.isEliminated && p.score > 0) {
         const record = ScoreDatabase.getInstance().addMatchScore(p.name, p.email, p.score);
@@ -1014,11 +1101,21 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.state.winnerName = winner;
     this.state.winnerScore = Math.max(0, topScore);
 
-    console.log(`[Room] Selesai! Juara: ${winner} (${topScore} Poin)`);
+    console.log(`[Room] 🏁 Misi Berakhir! Victory=${isVictory}. Juara: ${winner} (${topScore} Poin)`);
     this.broadcast("game_over", {
+      isVictory: this.state.isVictory,
+      victoryMessage: this.state.victoryMessage,
       winnerName: this.state.winnerName,
-      winnerScore: this.state.winnerScore
+      winnerScore: this.state.winnerScore,
+      returnToLobbyDelay: 7
     });
+
+    // Otomatis arahkan seluruh pemain kembali ke Lobi setelah 7 detik
+    this.clock.setTimeout(() => {
+      this.broadcast("return_to_lobby", {
+        message: isVictory ? "Selamat! Alien TaYa Berhasil Dikalahkan! Mengalihkan ke Lobi..." : "Misi selesai. Mengalihkan ke Lobi..."
+      });
+    }, 7000);
   }
 
   private resetGame() {
@@ -1030,6 +1127,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     this.timerAccumulator = 0;
     this.state.countdown = 120;
     this.state.startCountdown = 0;
+    this.state.isVictory = false;
+    this.state.victoryMessage = "";
     this.state.bullets.clear();
 
     // Reset status Kapal Induk Alien (Boss)

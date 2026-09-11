@@ -92,9 +92,12 @@ export class GameScene extends Phaser.Scene {
   private leaderboardContainer!: Phaser.GameObjects.Container;
   private leaderboardEntries: Phaser.GameObjects.Text[] = [];
 
-  // Match Finished Modal
+  // Match Finished / Victory Modal
   private modalContainer!: Phaser.GameObjects.Container;
+  private modalTitle!: Phaser.GameObjects.Text;
   private modalWinner!: Phaser.GameObjects.Text;
+  private modalSub!: Phaser.GameObjects.Text;
+  public onReturnToLobby?: () => void;
 
   // Elimination / Game Over Modal
   private eliminatedModal!: Phaser.GameObjects.Container;
@@ -529,36 +532,62 @@ export class GameScene extends Phaser.Scene {
     this.modalContainer = this.add.container(300, 460).setDepth(500).setVisible(false);
 
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x050b14, 0.92);
-    backdrop.fillRoundedRect(-200, -140, 400, 280, 16);
+    backdrop.fillStyle(0x050b14, 0.94);
+    backdrop.fillRoundedRect(-210, -150, 420, 300, 16);
     backdrop.lineStyle(2, 0xffd700, 0.85);
-    backdrop.strokeRoundedRect(-200, -140, 400, 280, 16);
+    backdrop.strokeRoundedRect(-210, -150, 420, 300, 16);
     this.modalContainer.add(backdrop);
 
-    const title = this.add.text(0, -95, "🏁 RACE SURVIVAL SELESAI! 🏁", {
+    this.modalTitle = this.add.text(0, -105, "🏁 MISI SELESAI 🏁", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "20px",
       fontStyle: "bold",
       color: "#ffd700",
     }).setOrigin(0.5);
-    this.modalContainer.add(title);
+    this.modalContainer.add(this.modalTitle);
 
-    this.modalWinner = this.add.text(0, -15, "Menghitung skor...", {
+    this.modalWinner = this.add.text(0, -25, "Menghitung hasil pertempuran...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "15px",
       fontStyle: "bold",
       color: "#fff",
       align: "center",
+      lineSpacing: 6
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalWinner);
 
-    const sub = this.add.text(0, 75, "Poin Anda telah diakumulasikan ke Database Kantor!\nRonde berikutnya dimulai otomatis...", {
+    this.modalSub = this.add.text(0, 45, "Poin Anda telah diakumulasikan ke Database Kantor!\nMengalihkan ke Lobi dalam 7 detik...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "11px",
       color: "#94a3b8",
       align: "center",
     }).setOrigin(0.5);
-    this.modalContainer.add(sub);
+    this.modalContainer.add(this.modalSub);
+
+    // Tombol Kembali ke Lobi Sektor
+    const btnLobbyBg = this.add.graphics();
+    btnLobbyBg.fillStyle(0x10b981, 1);
+    btnLobbyBg.fillRoundedRect(-140, 85, 280, 42, 8);
+    btnLobbyBg.lineStyle(1.5, 0x34d399, 0.8);
+    btnLobbyBg.strokeRoundedRect(-140, 85, 280, 42, 8);
+    this.modalContainer.add(btnLobbyBg);
+
+    const btnLobbyText = this.add.text(0, 106, "🚪 KEMBALI KE LOBBY SEKARANG", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: "#050b14"
+    }).setOrigin(0.5);
+    this.modalContainer.add(btnLobbyText);
+
+    const hitZone = this.add.zone(0, 106, 280, 42).setInteractive({ cursor: "pointer" });
+    hitZone.on("pointerdown", () => {
+      this.modalContainer.setVisible(false);
+      if (this.onReturnToLobby) {
+        this.onReturnToLobby();
+      }
+    });
+    this.modalContainer.add(hitZone);
   }
 
   private createEliminatedModal() {
@@ -1345,8 +1374,30 @@ export class GameScene extends Phaser.Scene {
       this.updateLeaderboard();
     });
 
-    this.room.onMessage("game_over", () => {
+    this.room.onMessage("bomb_exploded", (data: any) => {
+      this.triggerBombEffect(data);
+    });
+
+    this.room.onMessage("game_over", (data: any) => {
       sounds.playGameOver();
+      if (data && data.isVictory) {
+        this.modalTitle.setText("🏆 MISI BERHASIL! 🏆").setColor("#10b981");
+        this.modalWinner.setText(`Alien TaYa Berhasil Dikalahkan!\n⭐ Pahlawan: ${data.winnerName} ⭐\nSkor Tertinggi: ${data.winnerScore} Pts`);
+        this.modalSub.setText("Selamat! Pertahanan Bumi Terselamatkan!\nMengalihkan ke Lobi Pemilihan Room dalam 7 detik...");
+      } else {
+        this.modalTitle.setText("🏁 RACE SURVIVAL SELESAI! 🏁").setColor("#ffd700");
+        this.modalWinner.setText(`Pahlawan Pertahanan Bumi:\n⭐ ${data.winnerName} ⭐\nSkor Akhir: ${data.winnerScore} Pts`);
+        this.modalSub.setText("Waktu Pertempuran Habis!\nMengalihkan ke Lobi Pemilihan Room dalam 7 detik...");
+      }
+      this.modalContainer.setVisible(true);
+      sounds.stopBgm();
+    });
+
+    this.room.onMessage("return_to_lobby", () => {
+      this.modalContainer.setVisible(false);
+      if (this.onReturnToLobby) {
+        this.onReturnToLobby();
+      }
     });
 
     // 7. Efek Fisika Saat 2 Pesawat Pemain Beradu
@@ -1606,6 +1657,59 @@ export class GameScene extends Phaser.Scene {
       ease: "Cubic.easeOut",
       onComplete: () => text.destroy(),
     });
+  }
+
+  /**
+   * Efek Visual Spektakuler Ledakan EMP Plasma BOOM
+   */
+  private triggerBombEffect(data: any) {
+    // 1. Guncangan Layar Haptic Masif & Kilatan Layar Cyan/Putih
+    this.cameras.main.shake(450, 0.024);
+    this.cameras.main.flash(350, 0, 240, 255);
+
+    // 2. Putar Suara Gemuruh Dahsyat Bom
+    sounds.playBombExplosion();
+
+    // 3. Gelombang Kejut Listrik Plasma Meluas (Shockwave EMP Ring)
+    const shockRing = this.add.graphics().setDepth(160);
+    shockRing.lineStyle(8, 0x00f0ff, 1);
+    shockRing.strokeCircle(300, 500, 20);
+
+    const shockRing2 = this.add.graphics().setDepth(159);
+    shockRing2.lineStyle(5, 0xffffff, 0.9);
+    shockRing2.strokeCircle(300, 500, 15);
+
+    this.tweens.add({
+      targets: [shockRing, shockRing2],
+      scaleX: 30,
+      scaleY: 30,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        shockRing.destroy();
+        shockRing2.destroy();
+      }
+    });
+
+    // 4. Hancurkan seluruh peluru musuh di scene client
+    this.bullets.forEach((b, id) => {
+      if (b.isEnemy) {
+        this.createExplosionEffect(b.sprite.x, b.sprite.y, false);
+        b.sprite.destroy();
+        this.bullets.delete(id);
+      }
+    });
+
+    // 5. Spawn floating banner kemenangan ledakan boom
+    this.spawnFloatingText(300, 380, `💥 EMP BOOM! (${data.playerName})\n+${data.enemiesDestroyed} Pesawat Musuh Lenyap!`, "#fde047");
+
+    // 6. Update bar boss jika terkena ledakan
+    if (data.bossHit) {
+      this.updateBossHUD(data.bossHp, data.bossMaxHp || 75);
+    }
+
+    this.updateLeaderboard();
   }
 
   update(time: number, delta: number) {

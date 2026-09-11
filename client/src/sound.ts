@@ -342,6 +342,73 @@ class SoundManager {
     } catch (e) {}
   }
 
+  // Suara Gemuruh Dahsyat EMP Plasma BOOM
+  playBombExplosion() {
+    if (!this.sfxEnabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const duration = 0.85;
+
+    // 1. Heavy Noise Shockwave
+    try {
+      const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(900, now);
+      filter.frequency.exponentialRampToValueAtTime(80, now + duration);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.55, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + duration);
+    } catch (e) {}
+
+    // 2. Sub-bass Earthquake Drop
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = "triangle";
+    subOsc.frequency.setValueAtTime(140, now);
+    subOsc.frequency.exponentialRampToValueAtTime(28, now + duration);
+
+    subGain.gain.setValueAtTime(0.65, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + duration);
+
+    // 3. Cyber EMP Pitch Sweep
+    const sweepOsc = this.ctx.createOscillator();
+    const sweepGain = this.ctx.createGain();
+    sweepOsc.type = "sawtooth";
+    sweepOsc.frequency.setValueAtTime(1200, now);
+    sweepOsc.frequency.exponentialRampToValueAtTime(120, now + 0.4);
+
+    sweepGain.gain.setValueAtTime(0.32, now);
+    sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    sweepOsc.connect(sweepGain);
+    sweepGain.connect(this.ctx.destination);
+    sweepOsc.start(now);
+    sweepOsc.stop(now + 0.4);
+  }
+
   playCoin(value: number) {
     if (!this.sfxEnabled) return;
     this.initCtx();

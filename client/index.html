@@ -47,8 +47,17 @@
             </div>
           </div>
 
-          <!-- Tombol Tembak Roket Full Transparan di Kanan Bawah -->
+          <!-- Tombol Tembak Roket & Bom Plasma Transparan di Kanan Bawah -->
           <div class="fire-button-zone">
+            <!-- Tombol BOOM Kecil (Terisi 15 detik sekali) di atas tombol Fire -->
+            <button id="touch-bomb" class="touch-btn-bomb-glass" aria-label="Ledakan EMP Plasma Boom" title="EMP Plasma Boom (Cooldown 15 Detik)">
+              <span class="bomb-glass-icon">💥</span>
+              <span class="bomb-glass-label">BOOM</span>
+              <div class="bomb-cooldown-overlay" id="bomb-cooldown-overlay"></div>
+              <span class="bomb-cooldown-badge" id="bomb-cooldown-badge">SIAP</span>
+            </button>
+
+            <!-- Tombol Tembak Laser Utama -->
             <button id="touch-fire" class="touch-btn-fire-glass" aria-label="Tembak Roket">
               <span class="fire-glass-icon">🚀</span>
               <span class="fire-glass-label">FIRE</span>
@@ -67,7 +76,10 @@
             <span class="key-cap">W</span> <span class="key-cap">S</span> / <span class="key-cap">▲</span> <span class="key-cap">▼</span> <strong>±2 Langkah</strong>
           </div>
           <div class="legend-item">
-            <span class="key-cap">SPASI</span> / <span class="key-cap">TOUCH</span> <strong>Tembak</strong>
+            <span class="key-cap">SPASI</span> <strong>Tembak</strong>
+          </div>
+          <div class="legend-item">
+            <span class="key-cap">B</span> <strong>💥 BOOM (15s)</strong>
           </div>
         </div>
         <div class="legend-divider"></div>
@@ -179,7 +191,8 @@
           Koloni Alien dari <strong>Planet TaYa</strong> melancarkan invasi besar-besaran untuk menguasai Bumi! <strong>Anda dan skuadron pilot tempur</strong> dikerahkan ke orbit garis pertahanan terakhir untuk menghadang gempuran armada kapal alien, mengumpulkan inti energi kosmik (<strong>Plasma Core +25</strong>, <strong>Photon Core +50</strong>, & <strong>Quantum Core +100</strong>), dan bersiap menghadapi <strong>Kapal Induk Raksasa Alien Planet TaYa</strong> yang kebal dan bersenjata berat di akhir pertempuran!
         </p>
         <div class="storyboard-alert">
-          ⚠️ <strong>PROTOKOL TEMPUR:</strong> Anda dibekali <strong>3 Nyawa</strong> (dengan bar perisai 5x tembakan per nyawa). Di fase akhir pertempuran, hadapi <strong>Kapal Induk Alien Planet TaYa</strong> yang sulit dikalahkan bersama rekan-rekan pilot Anda!
+          ⚠️ <strong>PROTOKOL TEMPUR:</strong> Anda dibekali <strong>3 Nyawa</strong> (dengan bar perisai 5x tembakan per nyawa). Hadapi <strong>Kapal Induk Alien Planet TaYa</strong> bersama rekan pilot Anda untuk memenangkan misi!<br>
+          💥 <strong>SENJATA SPESIAL "BOOM" (EMP PLASMA):</strong> Di atas tombol Fire terdapat tombol <strong>BOOM</strong> (atau tekan <strong>B</strong> di keyboard) yang terisi otomatis setiap <strong>15 detik</strong>. Senjata ini menghasilkan gelombang kejut yang <strong>menghilangkan seluruh peluru musuh</strong> dan <strong>memberikan damage luas ke seluruh armada alien</strong>!
         </div>
       </div>
 
@@ -234,7 +247,14 @@
           <span class="hangar-ready-pill" id="hangar-ready-pill">👥 Pilot Siap: 0/0</span>
         </div>
         <h2>Pilih Karakter & Pesawat Tempur</h2>
-        <p>Masing-masing pilot (maks 5) memilih satu karakter unik dari 5 pilot resmi. Setelah seluruh pilot di sektor ini siap, siapa saja dapat menekan tombol START!</p>
+        <p>Masing-masing pilot (maks 5) memilih satu karakter unik. Setelah semua pilot siap, siapa saja dapat menekan tombol START!</p>
+      </div>
+
+      <!-- Tombol Start Cepat Melayang di Smartphone (Mudah Dijangkau Jari) -->
+      <div class="hangar-mobile-action-bar">
+        <button id="btn-start-battle-top" class="btn-primary btn-start-battle btn-start-battle-sync" disabled>
+          🚀 MULAI PERTEMPURAN (START)
+        </button>
       </div>
 
       <!-- 5 Kartu Karakter Grid -->
@@ -250,7 +270,7 @@
         </div>
         <div class="hangar-actions">
           <button id="btn-leave-hangar" class="btn-secondary">🚪 KELUAR KE LOBBY</button>
-          <button id="btn-start-battle" class="btn-primary btn-start-battle" disabled>
+          <button id="btn-start-battle" class="btn-primary btn-start-battle btn-start-battle-sync" disabled>
             🚀 MULAI PERTEMPURAN (START)
           </button>
         </div>
