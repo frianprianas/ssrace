@@ -157,6 +157,122 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // ==========================================
+  // 📜 MESIN TIK BRIEFING OPERASI RESMI (TYPEWRITER ENGINE)
+  // ==========================================
+  const briefingPanel = document.getElementById("briefing-panel") as HTMLDivElement;
+  const briefingNarrative = document.getElementById("briefing-narrative") as HTMLParagraphElement;
+  const briefingAlert = document.getElementById("briefing-alert") as HTMLDivElement;
+  const btnSkipBriefing = document.getElementById("btn-skip-briefing") as HTMLButtonElement;
+
+  const BRIEFING_FULL_NARRATIVE = `Koloni Alien dari <strong>Planet TaYa</strong> melancarkan invasi besar-besaran untuk menguasai Bumi! <strong>Anda dan skuadron pilot tempur</strong> dikerahkan ke orbit garis pertahanan terakhir untuk menghadang gempuran armada kapal alien, mengumpulkan inti energi kosmik (<strong>Plasma Core +25</strong>, <strong>Photon Core +50</strong>, & <strong>Quantum Core +100</strong>), dan bersiap menghadapi <strong>Kapal Induk Raksasa Alien Planet TaYa</strong> yang kebal dan bersenjata berat di akhir pertempuran!`;
+
+  const BRIEFING_FULL_ALERT = `⚠️ <strong>PROTOKOL TEMPUR:</strong> Anda dibekali <strong>3 Nyawa</strong> (dengan bar perisai 5x tembakan per nyawa). Hadapi <strong>Kapal Induk Alien Planet TaYa</strong> bersama rekan pilot Anda untuk memenangkan misi!<br>💥 <strong>SENJATA SPESIAL "BOOM" (EMP PLASMA):</strong> Di atas tombol Fire terdapat tombol <strong>BOOM</strong> (atau tekan <strong>B</strong> di keyboard) yang terisi otomatis setiap <strong>15 detik</strong>. Senjata ini menghasilkan gelombang kejut yang <strong>menghilangkan seluruh peluru musuh</strong> dan <strong>memberikan damage luas ke seluruh armada alien</strong>!`;
+
+  const NARRATIVE_PLAIN = `Koloni Alien dari Planet TaYa melancarkan invasi besar-besaran untuk menguasai Bumi! Anda dan skuadron pilot tempur dikerahkan ke orbit garis pertahanan terakhir untuk menghadang gempuran armada kapal alien, mengumpulkan inti energi kosmik (Plasma Core +25, Photon Core +50, & Quantum Core +100), dan bersiap menghadapi Kapal Induk Raksasa Alien Planet TaYa yang kebal dan bersenjata berat di akhir pertempuran!`;
+
+  const ALERT_PLAIN = `⚠️ PROTOKOL TEMPUR: Anda dibekali 3 Nyawa (dengan bar perisai 5x tembakan per nyawa). Hadapi Kapal Induk Alien Planet TaYa bersama rekan pilot Anda untuk memenangkan misi!\n💥 SENJATA SPESIAL "BOOM" (EMP PLASMA): Di atas tombol Fire terdapat tombol BOOM (atau tekan B di keyboard) yang terisi otomatis setiap 15 detik. Senjata ini menghasilkan gelombang kejut yang menghilangkan seluruh peluru musuh dan memberikan damage luas ke seluruh armada alien!`;
+
+  let typewriterTimer: any = null;
+  let isTypewriterActive = false;
+
+  const stopBriefingTypewriter = () => {
+    if (typewriterTimer) {
+      clearInterval(typewriterTimer);
+      typewriterTimer = null;
+    }
+    isTypewriterActive = false;
+  };
+
+  const skipBriefingTypewriter = () => {
+    stopBriefingTypewriter();
+    if (briefingNarrative) briefingNarrative.innerHTML = BRIEFING_FULL_NARRATIVE;
+    if (briefingAlert) {
+      briefingAlert.style.display = "block";
+      briefingAlert.innerHTML = BRIEFING_FULL_ALERT;
+    }
+    if (btnSkipBriefing) {
+      btnSkipBriefing.innerText = "✓ SELESAI";
+      btnSkipBriefing.style.opacity = "0.6";
+    }
+  };
+
+  const startBriefingTypewriter = () => {
+    stopBriefingTypewriter();
+    if (!briefingNarrative || !briefingAlert) return;
+
+    isTypewriterActive = true;
+    if (btnSkipBriefing) {
+      btnSkipBriefing.innerText = "⏩ LEWATI TEKS";
+      btnSkipBriefing.style.opacity = "1";
+    }
+
+    briefingNarrative.innerHTML = `<span class="typing-cursor">▌</span>`;
+    briefingAlert.innerHTML = "";
+    briefingAlert.style.display = "none";
+
+    let nIdx = 0;
+    let aIdx = 0;
+    let phase = 0; // 0 = narrative, 1 = alert
+
+    typewriterTimer = setInterval(() => {
+      if (!isTypewriterActive) {
+        stopBriefingTypewriter();
+        return;
+      }
+
+      if (phase === 0) {
+        nIdx += 2;
+        const currentText = NARRATIVE_PLAIN.slice(0, nIdx);
+        briefingNarrative.innerText = currentText;
+        briefingNarrative.innerHTML += `<span class="typing-cursor">▌</span>`;
+
+        if (nIdx % 4 === 0 || nIdx % 4 === 1) {
+          sounds.playTypewriter();
+        }
+
+        if (nIdx >= NARRATIVE_PLAIN.length) {
+          phase = 1;
+          briefingNarrative.innerHTML = BRIEFING_FULL_NARRATIVE;
+          briefingAlert.style.display = "block";
+          briefingAlert.innerHTML = `<span class="typing-cursor">▌</span>`;
+        }
+      } else if (phase === 1) {
+        aIdx += 3;
+        const currentAlert = ALERT_PLAIN.slice(0, aIdx).replace(/\n/g, "<br>");
+        briefingAlert.innerHTML = currentAlert + `<span class="typing-cursor">▌</span>`;
+
+        if (aIdx % 6 === 0 || aIdx % 6 === 1) {
+          sounds.playTypewriter();
+        }
+
+        if (aIdx >= ALERT_PLAIN.length) {
+          stopBriefingTypewriter();
+          briefingAlert.innerHTML = BRIEFING_FULL_ALERT;
+          if (btnSkipBriefing) {
+            btnSkipBriefing.innerText = "✓ SELESAI";
+            btnSkipBriefing.style.opacity = "0.6";
+          }
+        }
+      }
+    }, 16);
+  };
+
+  if (btnSkipBriefing) {
+    btnSkipBriefing.addEventListener("click", (e) => {
+      e.stopPropagation();
+      skipBriefingTypewriter();
+    });
+  }
+
+  if (briefingPanel) {
+    briefingPanel.addEventListener("click", () => {
+      if (isTypewriterActive) {
+        skipBriefingTypewriter();
+      }
+    });
+  }
+
   const showLobby = async (show: boolean) => {
     if (modalLobby) {
       modalLobby.style.display = show ? "flex" : "none";
@@ -169,6 +285,9 @@ window.addEventListener("DOMContentLoaded", () => {
         await fetchProfile(currentAuthData.username);
       }
       await fetchRooms();
+      startBriefingTypewriter();
+    } else {
+      stopBriefingTypewriter();
     }
   };
 
@@ -502,6 +621,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const joinRoom = async (roomNumber: number) => {
     if (!currentAuthData) return;
     selectedRoomNumber = roomNumber;
+    stopBriefingTypewriter();
 
     // Langsung buka Modal Hangar seketika agar pemain tidak melihat kanvas game kosong di jeda koneksi
     showLobby(false);

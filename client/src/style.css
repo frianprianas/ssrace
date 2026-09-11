@@ -883,7 +883,7 @@ body {
   padding: 22px !important;
 }
 
-/* Story Board Panel */
+/* Story Board Panel & Mesin Tik Briefing */
 .storyboard-panel {
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
   border: 1px solid rgba(0, 240, 255, 0.35);
@@ -893,6 +893,52 @@ body {
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 4px 20px rgba(0, 240, 255, 0.1);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.storyboard-panel:hover {
+  border-color: rgba(0, 240, 255, 0.6);
+}
+
+.briefing-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.btn-skip-typing {
+  background: rgba(0, 240, 255, 0.14);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #38bdf8;
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-mono);
+  user-select: none;
+}
+
+.btn-skip-typing:hover {
+  background: rgba(0, 240, 255, 0.3);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.typing-cursor {
+  display: inline-block;
+  color: #00f0ff;
+  font-weight: 900;
+  animation: blink-cursor 0.75s step-start infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink-cursor {
+  50% { opacity: 0; }
 }
 
 .storyboard-header h2 {
@@ -906,6 +952,7 @@ body {
   font-size: 0.82rem;
   color: #cbd5e1;
   line-height: 1.45;
+  min-height: 48px;
 }
 
 .storyboard-alert {
@@ -916,6 +963,7 @@ body {
   font-size: 0.76rem;
   color: #fca5a5;
   line-height: 1.35;
+  min-height: 40px;
 }
 
 /* Kartu Profil Karyawan di Lobby */

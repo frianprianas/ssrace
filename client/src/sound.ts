@@ -541,6 +541,32 @@ class SoundManager {
       clickOsc.stop(now + 0.05);
     } catch (e) {}
   }
+
+  // Suara Ketikan Mesin Tik Teletype Terminal Luar Angkasa
+  playTypewriter() {
+    if (!this.sfxEnabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sine";
+      const freq = 1400 + Math.random() * 500;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.022);
+
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.024);
+    } catch (e) {}
+  }
 }
 
 export const sounds = new SoundManager();
