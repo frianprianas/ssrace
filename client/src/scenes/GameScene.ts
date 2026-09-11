@@ -809,12 +809,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("enemy_destroyed", (data: any) => {
-      this.spawnFloatingText(data.x, data.y, `+${data.points} HANCURKAN ${data.enemyName}!`, "#34d399");
-      this.createExplosionEffect(data.x, data.y);
-
-      if (data.killerId === this.room.sessionId) {
-        sounds.playExplosion();
-      }
+      this.spawnFloatingText(data.x, data.y, `💥 +${data.points} HANCURKAN ${data.enemyName}!`, "#34d399");
+      this.createExplosionEffect(data.x, data.y, false);
+      sounds.playExplosion(false);
     });
 
     this.room.onMessage("enemy_shoot", () => {
@@ -822,25 +819,27 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("player_damaged", (data: any) => {
-      this.spawnFloatingText(data.x, data.y, `TERKENA! (-1 NYAWA, SISA: ${data.hpRemaining})`, "#ef4444");
+      this.createExplosionEffect(data.x, data.y, true);
+      sounds.playExplosion(true);
+      this.spawnFloatingText(data.x, data.y, `💥 KENA SERANGAN! (-1 NYAWA, SISA: ${data.hpRemaining})`, "#ef4444");
 
       if (data.playerId === this.room.sessionId) {
-        this.cameras.main.shake(250, 0.025);
-        this.cameras.main.flash(200, 255, 0, 0);
-        sounds.playHit();
+        this.cameras.main.shake(320, 0.035);
+        this.cameras.main.flash(250, 255, 0, 0);
       }
     });
 
     this.room.onMessage("player_eliminated", (data: any) => {
       this.createBigExplosionEffect(data.x, data.y);
-      this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} TERELIMINASI!`, "#f43f5e");
+      sounds.playExplosion(true);
+      this.spawnFloatingText(data.x, data.y, `💥 ${data.playerName} HANCUR LEBUR!`, "#f43f5e");
     });
 
     // Khusus untuk pemain ini jika tereliminasi (3x terkena serangan)
     this.room.onMessage("you_are_eliminated", (data: any) => {
-      sounds.playExplosion();
-      this.cameras.main.shake(400, 0.04);
-      this.cameras.main.flash(300, 255, 0, 0);
+      sounds.playExplosion(true);
+      this.cameras.main.shake(450, 0.05);
+      this.cameras.main.flash(350, 255, 0, 0);
 
       this.elimReasonText.setText(data.message || "Pesawat Anda terkena serangan 3x!");
       this.elimScoreText.setText(
@@ -857,40 +856,63 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private createExplosionEffect(x: number, y: number) {
-    const burst = this.add.graphics().setDepth(35);
-    burst.fillStyle(0xffaa00, 1);
-    burst.fillCircle(x, y, 16);
-    burst.fillStyle(0xffff00, 1);
-    burst.fillCircle(x, y, 9);
-
+  private createExplosionEffect(x: number, y: number, isBig: boolean = false) {
+    // 1. Shockwave Ring Meledak Meluas
+    const shockwave = this.add.graphics().setDepth(36);
+    shockwave.lineStyle(isBig ? 4 : 2.5, 0xff7700, 1);
+    shockwave.strokeCircle(x, y, isBig ? 18 : 12);
     this.tweens.add({
-      targets: burst,
-      scaleX: 2.2,
-      scaleY: 2.2,
+      targets: shockwave,
+      scaleX: isBig ? 3.5 : 2.5,
+      scaleY: isBig ? 3.5 : 2.5,
       alpha: 0,
-      duration: 350,
+      duration: isBig ? 450 : 320,
       ease: "Cubic.easeOut",
-      onComplete: () => burst.destroy(),
+      onComplete: () => shockwave.destroy(),
     });
+
+    // 2. Bola Api Inti (Fireball Core)
+    const core = this.add.graphics().setDepth(37);
+    core.fillStyle(0xffff44, 1);
+    core.fillCircle(x, y, isBig ? 24 : 15);
+    core.fillStyle(0xff3300, 0.9);
+    core.fillCircle(x, y, isBig ? 34 : 22);
+    this.tweens.add({
+      targets: core,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      alpha: 0,
+      duration: isBig ? 400 : 280,
+      ease: "Quad.easeOut",
+      onComplete: () => core.destroy(),
+    });
+
+    // 3. Percikan Api Serpihan (Flying Spark Particles)
+    const sparkCount = isBig ? 12 : 8;
+    for (let i = 0; i < sparkCount; i++) {
+      const spark = this.add.graphics().setDepth(38);
+      spark.fillStyle(Math.random() < 0.5 ? 0xffd700 : 0xff3300, 1);
+      spark.fillCircle(0, 0, Math.random() < 0.5 ? 3 : 2);
+      spark.x = x;
+      spark.y = y;
+
+      const angle = (i / sparkCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const dist = (isBig ? 48 : 28) + Math.random() * (isBig ? 35 : 18);
+
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        duration: 350 + Math.random() * 150,
+        ease: "Cubic.easeOut",
+        onComplete: () => spark.destroy(),
+      });
+    }
   }
 
   private createBigExplosionEffect(x: number, y: number) {
-    const burst = this.add.graphics().setDepth(40);
-    burst.fillStyle(0xff2200, 1);
-    burst.fillCircle(x, y, 28);
-    burst.fillStyle(0xffaa00, 1);
-    burst.fillCircle(x, y, 16);
-
-    this.tweens.add({
-      targets: burst,
-      scaleX: 3.0,
-      scaleY: 3.0,
-      alpha: 0,
-      duration: 500,
-      ease: "Cubic.easeOut",
-      onComplete: () => burst.destroy(),
-    });
+    this.createExplosionEffect(x, y, true);
   }
 
   private updateLeaderboard() {

@@ -151,8 +151,8 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
     });
 
     if (this.state.status === "waiting") {
-      if (activePlayers >= 2) {
-        console.log("[Room] Minimal 2 pemain terpenuhi! Memulai race survival 120s...");
+      if (activePlayers >= 1) {
+        console.log("[Room] Pemain aktif terdeteksi! Memulai race survival 120s...");
         this.state.status = "playing";
         this.state.countdown = 120;
         this.timerAccumulator = 0;
@@ -326,9 +326,9 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       // Tembakan Peluru Lambat Pesawat Musuh
-      if (this.state.status === "playing" && enemy.y > 20 && enemy.y < 460) {
+      if (this.state.status !== "finished" && enemy.y > 15 && enemy.y < 520) {
         enemy.shootTimer += dtSec;
-        const shootInterval = 2.2; // Rata-rata 2.2 detik
+        const shootInterval = 1.8; // Menembak peluru plasma setiap 1.8 detik
         if (enemy.shootTimer >= shootInterval) {
           enemy.shootTimer = 0;
           this.spawnEnemyBullet(enemy);
@@ -341,11 +341,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
       }
 
       // Tabrakan Langsung Pesawat Musuh dengan Pemain
-      if (this.state.status === "playing") {
+      if (this.state.status !== "finished") {
         this.state.players.forEach((player, sessionId) => {
           if (!player.isEliminated && player.invulnerableTimer <= 0) {
             const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-            if (dist < (playerRadius + enemy.radius)) {
+            if (dist < (playerRadius + enemy.radius + 10)) {
               this.damagePlayer(player, sessionId, enemy.name);
               this.respawnEnemy(enemy, undefined, 95);
             }
@@ -371,11 +371,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
 
         // Tabrakan Peluru Musuh dengan Pemain
         let hitPlayer = false;
-        if (this.state.status === "playing") {
+        if (this.state.status !== "finished") {
           this.state.players.forEach((player, sessionId) => {
             if (!hitPlayer && !player.isEliminated && player.invulnerableTimer <= 0) {
               const dist = Math.hypot(b.x - player.x, b.y - player.y);
-              if (dist < (playerRadius + 8)) {
+              if (dist < (playerRadius + 16)) {
                 hitPlayer = true;
                 this.damagePlayer(player, sessionId, "Peluru Pesawat Musuh");
               }
@@ -404,7 +404,7 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
           const enemy = this.state.enemies[j];
           if (!enemy) continue;
 
-          if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < enemy.radius + 8) {
+          if (enemy.y > 0 && Math.hypot(b.x - enemy.x, b.y - enemy.y) < (enemy.radius + 18)) {
             const shooter = this.state.players.get(b.playerId);
             if (shooter && !shooter.isEliminated) {
               shooter.score += 40;
@@ -439,11 +439,11 @@ export class PlaneRaceRoom extends Room<PlaneRaceState> {
         this.randomizeCoin(coin);
       }
 
-      if (this.state.status === "playing") {
+      if (this.state.status !== "finished") {
         this.state.players.forEach((player, sessionId) => {
           if (!player.isEliminated) {
             const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
-            if (dist < (playerRadius + coin.radius)) {
+            if (dist < (playerRadius + coin.radius + 16)) {
               player.score += coin.value;
 
               this.broadcast("coin_collected", {
