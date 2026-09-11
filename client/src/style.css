@@ -1173,6 +1173,20 @@ body {
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Seluruh elemen anak kartu menjadi satu area sentuh utuh */
+.char-card * {
+  pointer-events: none;
+}
+
+.char-card:active:not(.char-card-taken),
+.char-card-pressed {
+  transform: scale(0.97) !important;
+  border-color: var(--char-glow, #00f0ff) !important;
+  box-shadow: 0 0 20px var(--char-glow, rgba(0, 240, 255, 0.5)) !important;
 }
 
 .char-card:hover:not(.char-card-taken) {

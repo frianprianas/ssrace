@@ -370,13 +370,30 @@ window.addEventListener("DOMContentLoaded", () => {
       `;
     }).join("");
 
-    // Pasang click listener ke kartu karakter
+    // Pasang listener klik / tap ke SELURUH AREA kartu karakter (foto, nama, teks, maupun tombol)
     charSelectionGrid.querySelectorAll(".char-card").forEach((elem) => {
-      elem.addEventListener("click", () => {
+      let touchHandled = false;
+
+      const handleSelect = () => {
         sounds.unlockAudio();
         const charId = parseInt(elem.getAttribute("data-char-id") || "-1");
         if (charId < 0 || elem.classList.contains("char-card-taken")) return;
+
+        elem.classList.add("char-card-pressed");
+        setTimeout(() => elem.classList.remove("char-card-pressed"), 180);
+
         room.send("select_character", { characterId: charId });
+      };
+
+      elem.addEventListener("pointerdown", () => {
+        touchHandled = true;
+        handleSelect();
+        setTimeout(() => { touchHandled = false; }, 300);
+      });
+
+      elem.addEventListener("click", () => {
+        if (touchHandled) return;
+        handleSelect();
       });
     });
 

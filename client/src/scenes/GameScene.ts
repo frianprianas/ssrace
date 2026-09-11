@@ -103,6 +103,8 @@ export class GameScene extends Phaser.Scene {
   private eliminatedModal!: Phaser.GameObjects.Container;
   private elimReasonText!: Phaser.GameObjects.Text;
   private elimScoreText!: Phaser.GameObjects.Text;
+  private elimCountdownText!: Phaser.GameObjects.Text;
+  private eliminatedTimer: any = null;
 
   // Start Countdown Visual Overlay (Hitung Mundur 3.. 2.. 1.. GO!)
   private countdownContainer: Phaser.GameObjects.Container | null = null;
@@ -626,13 +628,22 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimScoreText);
 
-    // Tombol Masuk Arena Balap Lagi
-    const btnRejoin = this.add.graphics();
-    btnRejoin.fillStyle(0x00f0ff, 1);
-    btnRejoin.fillRoundedRect(-140, 80, 280, 44, 8);
-    this.eliminatedModal.add(btnRejoin);
+    // Subtext countdown otomatis keluar ke Lobi
+    this.elimCountdownText = this.add.text(0, 56, "Otomatis kembali ke Lobi dalam 6 detik...", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12px",
+      color: "#94a3b8",
+      align: "center"
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(this.elimCountdownText);
 
-    const btnText = this.add.text(0, 102, "🚀 MASUK ARENA BALAP LAGI", {
+    // Tombol Keluar Hangar ke Lobi Sektor (Pilih Room Kembali)
+    const btnLobby = this.add.graphics();
+    btnLobby.fillStyle(0x38bdf8, 1);
+    btnLobby.fillRoundedRect(-145, 80, 290, 46, 8);
+    this.eliminatedModal.add(btnLobby);
+
+    const btnText = this.add.text(0, 103, "🚪 KELUAR KE LOBI (PILIH ROOM)", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "14px",
       fontStyle: "bold",
@@ -640,10 +651,16 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.eliminatedModal.add(btnText);
 
-    const hitZone = this.add.zone(0, 102, 280, 44).setInteractive({ cursor: "pointer" });
+    const hitZone = this.add.zone(0, 103, 290, 46).setInteractive({ cursor: "pointer" });
     hitZone.on("pointerdown", () => {
       this.eliminatedModal.setVisible(false);
-      this.reconnect();
+      if (this.eliminatedTimer) {
+        clearInterval(this.eliminatedTimer);
+        this.eliminatedTimer = null;
+      }
+      if (this.onReturnToLobby) {
+        this.onReturnToLobby();
+      }
     });
     this.eliminatedModal.add(hitZone);
   }
@@ -844,6 +861,13 @@ export class GameScene extends Phaser.Scene {
     if (this.bossHudContainer) {
       this.bossHudContainer.setVisible(false);
     }
+    if (this.eliminatedTimer) {
+      clearInterval(this.eliminatedTimer);
+      this.eliminatedTimer = null;
+    }
+    if (this.eliminatedModal) {
+      this.eliminatedModal.setVisible(false);
+    }
   }
 
   async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string; roomNumber?: number }) {
@@ -884,24 +908,6 @@ export class GameScene extends Phaser.Scene {
       this.statusBadge.setText("AUTENTIKASI GAGAL");
       this.statusBadge.setColor("#ef4444");
       throw new Error(msg);
-    }
-  }
-
-  private async reconnect() {
-    if (this.eliminatedModal) this.eliminatedModal.setVisible(false);
-    this.cleanupEntities();
-
-    if (this.lastAuthOptions) {
-      try {
-        await this.connectToServer(this.lastAuthOptions);
-      } catch (e) {
-        console.warn("Gagal auto-rejoin:", e);
-        const loginModal = document.getElementById("login-modal");
-        if (loginModal) loginModal.style.display = "flex";
-      }
-    } else {
-      const loginModal = document.getElementById("login-modal");
-      if (loginModal) loginModal.style.display = "flex";
     }
   }
 
@@ -1372,6 +1378,33 @@ export class GameScene extends Phaser.Scene {
       this.eliminatedModal.setVisible(true);
       sounds.stopBgm();
       this.updateLeaderboard();
+
+      // Hitung mundur 6 detik otomatis kembali ke Lobi (Pilih Room)
+      let remainSec = 6;
+      if (this.elimCountdownText) {
+        this.elimCountdownText.setText(`Otomatis kembali ke Lobi dalam ${remainSec} detik...`);
+      }
+      if (this.eliminatedTimer) {
+        clearInterval(this.eliminatedTimer);
+      }
+      this.eliminatedTimer = setInterval(() => {
+        remainSec--;
+        if (this.elimCountdownText) {
+          this.elimCountdownText.setText(`Otomatis kembali ke Lobi dalam ${Math.max(0, remainSec)} detik...`);
+        }
+        if (remainSec <= 0) {
+          if (this.eliminatedTimer) {
+            clearInterval(this.eliminatedTimer);
+            this.eliminatedTimer = null;
+          }
+          if (this.eliminatedModal.visible) {
+            this.eliminatedModal.setVisible(false);
+            if (this.onReturnToLobby) {
+              this.onReturnToLobby();
+            }
+          }
+        }
+      }, 1000);
     });
 
     this.room.onMessage("bomb_exploded", (data: any) => {
