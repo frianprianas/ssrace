@@ -103,6 +103,7 @@ export class GameScene extends Phaser.Scene {
   private modalWinner!: Phaser.GameObjects.Text;
   private modalSub!: Phaser.GameObjects.Text;
   public onReturnToLobby?: () => void;
+  public onExitGame?: () => void;
 
   // Elimination / Game Over Modal
   private eliminatedModal!: Phaser.GameObjects.Container;
@@ -543,13 +544,13 @@ export class GameScene extends Phaser.Scene {
     this.modalContainer = this.add.container(300, 460).setDepth(500).setVisible(false);
 
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x050b14, 0.94);
-    backdrop.fillRoundedRect(-215, -170, 430, 345, 16);
-    backdrop.lineStyle(2, 0xffd700, 0.85);
-    backdrop.strokeRoundedRect(-215, -170, 430, 345, 16);
+    backdrop.fillStyle(0x050b14, 0.95);
+    backdrop.fillRoundedRect(-220, -195, 440, 390, 16);
+    backdrop.lineStyle(2, 0xffd700, 0.9);
+    backdrop.strokeRoundedRect(-220, -195, 440, 390, 16);
     this.modalContainer.add(backdrop);
 
-    this.modalTitle = this.add.text(0, -128, "🏁 MISI SELESAI 🏁", {
+    this.modalTitle = this.add.text(0, -150, "🏁 MISI SELESAI 🏁", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "20px",
       fontStyle: "bold",
@@ -557,7 +558,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalTitle);
 
-    this.modalWinner = this.add.text(0, -62, "Menghitung hasil pertempuran...", {
+    this.modalWinner = this.add.text(0, -88, "Menghitung hasil pertempuran...", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "15px",
       fontStyle: "bold",
@@ -567,91 +568,115 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalWinner);
 
-    this.modalSub = this.add.text(0, 10, "Poin Anda telah diakumulasikan ke Database Kantor!\nMengalihkan ke Lobi dalam 7 detik...", {
+    this.modalSub = this.add.text(0, -26, "Poin Anda telah diakumulasikan ke Database Kantor!\nSilakan tentukan pilihan Anda:", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "11px",
+      fontSize: "12px",
       color: "#94a3b8",
       align: "center",
     }).setOrigin(0.5);
     this.modalContainer.add(this.modalSub);
 
-    // Tombol 1: Update Status Kemenangan di BaknusID
-    const btnBaknusBg = this.add.graphics();
-    btnBaknusBg.fillStyle(0x0284c7, 1);
-    btnBaknusBg.fillRoundedRect(-140, 52, 280, 40, 8);
-    btnBaknusBg.lineStyle(1.5, 0x38bdf8, 0.9);
-    btnBaknusBg.strokeRoundedRect(-140, 52, 280, 40, 8);
-    this.modalContainer.add(btnBaknusBg);
+    // Tombol 1: Kembali ke Hangar (Pilih Room)
+    const btnLobbyBg = this.add.graphics();
+    btnLobbyBg.fillStyle(0x0284c7, 1);
+    btnLobbyBg.fillRoundedRect(-145, 12, 290, 42, 8);
+    btnLobbyBg.lineStyle(1.5, 0x38bdf8, 0.9);
+    btnLobbyBg.strokeRoundedRect(-145, 12, 290, 42, 8);
+    this.modalContainer.add(btnLobbyBg);
 
-    const btnBaknusText = this.add.text(0, 72, "📢 UPDATE STATUS DI BAKNUSID", {
+    const btnLobbyText = this.add.text(0, 33, "🚀 KEMBALI KE HANGAR (PILIH ROOM)", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "12.5px",
       fontStyle: "bold",
       color: "#ffffff"
     }).setOrigin(0.5);
-    this.modalContainer.add(btnBaknusText);
-
-    const hitZoneBaknus = this.add.zone(0, 72, 280, 40).setInteractive({ cursor: "pointer" });
-    hitZoneBaknus.on("pointerdown", () => {
-      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, this.lastIsVictory);
-    });
-    this.modalContainer.add(hitZoneBaknus);
-
-    // Tombol 2: Kembali ke Lobi Sektor
-    const btnLobbyBg = this.add.graphics();
-    btnLobbyBg.fillStyle(0x10b981, 1);
-    btnLobbyBg.fillRoundedRect(-140, 104, 280, 40, 8);
-    btnLobbyBg.lineStyle(1.5, 0x34d399, 0.8);
-    btnLobbyBg.strokeRoundedRect(-140, 104, 280, 40, 8);
-    this.modalContainer.add(btnLobbyBg);
-
-    const btnLobbyText = this.add.text(0, 124, "🚪 KEMBALI KE LOBBY SEKARANG", {
-      fontFamily: "'Outfit', sans-serif",
-      fontSize: "12.5px",
-      fontStyle: "bold",
-      color: "#050b14"
-    }).setOrigin(0.5);
     this.modalContainer.add(btnLobbyText);
 
-    const hitZone = this.add.zone(0, 124, 280, 40).setInteractive({ cursor: "pointer" });
-    hitZone.on("pointerdown", () => {
+    const hitZoneLobby = this.add.zone(0, 33, 290, 42).setInteractive({ cursor: "pointer" });
+    hitZoneLobby.on("pointerdown", () => {
       this.modalContainer.setVisible(false);
       if (this.onReturnToLobby) {
         this.onReturnToLobby();
       }
     });
-    this.modalContainer.add(hitZone);
+    this.modalContainer.add(hitZoneLobby);
+
+    // Tombol 2: Keluar Dari Game (Hentikan Musik)
+    const btnExitBg = this.add.graphics();
+    btnExitBg.fillStyle(0xdc2626, 1);
+    btnExitBg.fillRoundedRect(-145, 64, 290, 42, 8);
+    btnExitBg.lineStyle(1.5, 0xf87171, 0.9);
+    btnExitBg.strokeRoundedRect(-145, 64, 290, 42, 8);
+    this.modalContainer.add(btnExitBg);
+
+    const btnExitText = this.add.text(0, 85, "🚪 KELUAR DARI GAME", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12.5px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    }).setOrigin(0.5);
+    this.modalContainer.add(btnExitText);
+
+    const hitZoneExit = this.add.zone(0, 85, 290, 42).setInteractive({ cursor: "pointer" });
+    hitZoneExit.on("pointerdown", () => {
+      this.triggerExitGame();
+    });
+    this.modalContainer.add(hitZoneExit);
+
+    // Tombol 3: Update Status Kemenangan di BaknusID
+    const btnBaknusBg = this.add.graphics();
+    btnBaknusBg.fillStyle(0x7c3aed, 1);
+    btnBaknusBg.fillRoundedRect(-145, 116, 290, 36, 8);
+    btnBaknusBg.lineStyle(1.5, 0xa78bfa, 0.8);
+    btnBaknusBg.strokeRoundedRect(-145, 116, 290, 36, 8);
+    this.modalContainer.add(btnBaknusBg);
+
+    const btnBaknusText = this.add.text(0, 134, "📢 UPDATE STATUS DI BAKNUSID", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    }).setOrigin(0.5);
+    this.modalContainer.add(btnBaknusText);
+
+    const hitZoneBaknus = this.add.zone(0, 134, 290, 36).setInteractive({ cursor: "pointer" });
+    hitZoneBaknus.on("pointerdown", () => {
+      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, this.lastIsVictory);
+    });
+    this.modalContainer.add(hitZoneBaknus);
   }
 
   private createEliminatedModal() {
     this.eliminatedModal = this.add.container(300, 460).setDepth(600).setVisible(false);
 
+    // Backdrop Cyber Panel Merah Gelap Game Over
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x0a0508, 0.95);
-    backdrop.fillRoundedRect(-220, -175, 440, 350, 16);
-    backdrop.lineStyle(2.5, 0xef4444, 0.9);
-    backdrop.strokeRoundedRect(-220, -175, 440, 350, 16);
+    backdrop.fillStyle(0x0a0508, 0.96);
+    backdrop.fillRoundedRect(-220, -200, 440, 400, 16);
+    backdrop.lineStyle(2.5, 0xef4444, 0.95);
+    backdrop.strokeRoundedRect(-220, -200, 440, 400, 16);
     this.eliminatedModal.add(backdrop);
 
-    const title = this.add.text(0, -132, "💥 TERELIMINASI! (GAME OVER) 💥", {
+    const title = this.add.text(0, -158, "💀 GAME OVER 💀", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "19px",
+      fontSize: "24px",
       fontStyle: "bold",
       color: "#ef4444",
     }).setOrigin(0.5);
     this.eliminatedModal.add(title);
 
-    this.elimReasonText = this.add.text(0, -85, "Pesawat Anda terkena tembakan musuh!", {
+    this.elimReasonText = this.add.text(0, -122, "Pesawat Anda Hancur Tereliminasi!", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "12.5px",
+      fontSize: "13px",
       color: "#fca5a5",
       align: "center",
+      wordWrap: { width: 380 }
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimReasonText);
 
-    this.elimScoreText = this.add.text(0, -22, "Skor Match: 0 Poin\nTotal Akumulasi: 0 Poin", {
+    this.elimScoreText = this.add.text(0, -68, "Skor Match: 0 Poin\nTotal Akumulasi: 0 Poin", {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "13px",
+      fontSize: "12.5px",
       fontStyle: "bold",
       color: "#ffd700",
       align: "center",
@@ -659,63 +684,35 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.eliminatedModal.add(this.elimScoreText);
 
-    // Subtext countdown otomatis keluar ke Lobi
-    this.elimCountdownText = this.add.text(0, 28, "Otomatis kembali ke Lobi dalam 6 detik...", {
+    // Subtext prompt
+    const promptText = this.add.text(0, -18, "Silakan pilih tindakan lanjutan:", {
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "11px",
+      fontSize: "11.5px",
       color: "#94a3b8",
       align: "center"
     }).setOrigin(0.5);
-    this.eliminatedModal.add(this.elimCountdownText);
+    this.eliminatedModal.add(promptText);
 
-    // Tombol 1: Update Status di BaknusID (Kalah/Eliminasi)
-    const btnBaknusElimBg = this.add.graphics();
-    btnBaknusElimBg.fillStyle(0x7c3aed, 1);
-    btnBaknusElimBg.fillRoundedRect(-140, 56, 280, 40, 8);
-    btnBaknusElimBg.lineStyle(1.5, 0xa78bfa, 0.9);
-    btnBaknusElimBg.strokeRoundedRect(-140, 56, 280, 40, 8);
-    this.eliminatedModal.add(btnBaknusElimBg);
+    // ========================================================
+    // OPSI 1: KEMBALI KE HANGAR (PILIH ROOM)
+    // ========================================================
+    const btnLobbyBg = this.add.graphics();
+    btnLobbyBg.fillStyle(0x0284c7, 1);
+    btnLobbyBg.fillRoundedRect(-145, 6, 290, 42, 8);
+    btnLobbyBg.lineStyle(1.5, 0x38bdf8, 0.9);
+    btnLobbyBg.strokeRoundedRect(-145, 6, 290, 42, 8);
+    this.eliminatedModal.add(btnLobbyBg);
 
-    const btnBaknusElimText = this.add.text(0, 76, "📢 UPDATE STATUS DI BAKNUSID", {
+    const btnLobbyText = this.add.text(0, 27, "🚀 KEMBALI KE HANGAR (PILIH ROOM)", {
       fontFamily: "'Outfit', sans-serif",
       fontSize: "12.5px",
       fontStyle: "bold",
       color: "#ffffff",
     }).setOrigin(0.5);
-    this.eliminatedModal.add(btnBaknusElimText);
+    this.eliminatedModal.add(btnLobbyText);
 
-    const hitZoneBaknusElim = this.add.zone(0, 76, 280, 40).setInteractive({ cursor: "pointer" });
-    hitZoneBaknusElim.on("pointerdown", () => {
-      // Hentikan timer auto-close agar pemain sempat memposting status
-      if (this.eliminatedTimer) {
-        clearInterval(this.eliminatedTimer);
-        this.eliminatedTimer = null;
-      }
-      if (this.elimCountdownText) {
-        this.elimCountdownText.setText("Menghubungkan ke BaknusID...");
-      }
-      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, false);
-    });
-    this.eliminatedModal.add(hitZoneBaknusElim);
-
-    // Tombol 2: Keluar Hangar ke Lobi Sektor (Pilih Room Kembali)
-    const btnLobby = this.add.graphics();
-    btnLobby.fillStyle(0x38bdf8, 1);
-    btnLobby.fillRoundedRect(-140, 106, 280, 40, 8);
-    btnLobby.lineStyle(1.5, 0x7dd3fc, 0.9);
-    btnLobby.strokeRoundedRect(-140, 106, 280, 40, 8);
-    this.eliminatedModal.add(btnLobby);
-
-    const btnText = this.add.text(0, 126, "🚪 KELUAR KE LOBI (PILIH ROOM)", {
-      fontFamily: "'Outfit', sans-serif",
-      fontSize: "12.5px",
-      fontStyle: "bold",
-      color: "#050b14",
-    }).setOrigin(0.5);
-    this.eliminatedModal.add(btnText);
-
-    const hitZone = this.add.zone(0, 126, 280, 40).setInteractive({ cursor: "pointer" });
-    hitZone.on("pointerdown", () => {
+    const hitZoneLobby = this.add.zone(0, 27, 290, 42).setInteractive({ cursor: "pointer" });
+    hitZoneLobby.on("pointerdown", () => {
       this.eliminatedModal.setVisible(false);
       if (this.eliminatedTimer) {
         clearInterval(this.eliminatedTimer);
@@ -725,7 +722,112 @@ export class GameScene extends Phaser.Scene {
         this.onReturnToLobby();
       }
     });
-    this.eliminatedModal.add(hitZone);
+    this.eliminatedModal.add(hitZoneLobby);
+
+    // ========================================================
+    // OPSI 2: KELUAR DARI GAME (HENTIKAN MUSIK SECARA TOTAL)
+    // ========================================================
+    const btnExitBg = this.add.graphics();
+    btnExitBg.fillStyle(0xdc2626, 1);
+    btnExitBg.fillRoundedRect(-145, 58, 290, 42, 8);
+    btnExitBg.lineStyle(1.5, 0xf87171, 0.9);
+    btnExitBg.strokeRoundedRect(-145, 58, 290, 42, 8);
+    this.eliminatedModal.add(btnExitBg);
+
+    const btnExitText = this.add.text(0, 79, "🚪 KELUAR DARI GAME", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12.5px",
+      fontStyle: "bold",
+      color: "#ffffff",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(btnExitText);
+
+    const hitZoneExit = this.add.zone(0, 79, 290, 42).setInteractive({ cursor: "pointer" });
+    hitZoneExit.on("pointerdown", () => {
+      this.triggerExitGame();
+    });
+    this.eliminatedModal.add(hitZoneExit);
+
+    // ========================================================
+    // OPSI TAMBAHAN: UPDATE STATUS DI BAKNUSID
+    // ========================================================
+    const btnBaknusElimBg = this.add.graphics();
+    btnBaknusElimBg.fillStyle(0x7c3aed, 1);
+    btnBaknusElimBg.fillRoundedRect(-145, 110, 290, 36, 8);
+    btnBaknusElimBg.lineStyle(1.5, 0xa78bfa, 0.8);
+    btnBaknusElimBg.strokeRoundedRect(-145, 110, 290, 36, 8);
+    this.eliminatedModal.add(btnBaknusElimBg);
+
+    const btnBaknusElimText = this.add.text(0, 128, "📢 UPDATE STATUS DI BAKNUSID", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "12px",
+      fontStyle: "bold",
+      color: "#ffffff",
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(btnBaknusElimText);
+
+    const hitZoneBaknusElim = this.add.zone(0, 128, 290, 36).setInteractive({ cursor: "pointer" });
+    hitZoneBaknusElim.on("pointerdown", () => {
+      if (this.elimCountdownText) {
+        this.elimCountdownText.setText("Menghubungkan ke BaknusID...");
+      }
+      this.triggerBaknusIDStatusUpdate(this.currentLocalScore, false);
+    });
+    this.eliminatedModal.add(hitZoneBaknusElim);
+
+    // Status / info teks
+    this.elimCountdownText = this.add.text(0, 164, "", {
+      fontFamily: "'Outfit', sans-serif",
+      fontSize: "11px",
+      color: "#94a3b8",
+      align: "center"
+    }).setOrigin(0.5);
+    this.eliminatedModal.add(this.elimCountdownText);
+  }
+
+  /**
+   * Keluar dari game secara total:
+   * 1. Hentikan musik procedural dan suspend AudioContext
+   * 2. Bersihkan interval/timer & sembunyikan modal
+   * 3. Kirim event EXIT_GAME ke host WebView (Flutter/BaknusID)
+   * 4. Panggil onExitGame callback untuk kembali ke menu awal di browser
+   */
+  public triggerExitGame() {
+    sounds.exitGame();
+    if (this.eliminatedTimer) {
+      clearInterval(this.eliminatedTimer);
+      this.eliminatedTimer = null;
+    }
+    if (this.eliminatedModal) {
+      this.eliminatedModal.setVisible(false);
+    }
+    if (this.modalContainer) {
+      this.modalContainer.setVisible(false);
+    }
+
+    const payload = {
+      action: "EXIT_GAME",
+      game: "ssrace"
+    };
+    const win = window as any;
+    if (win.BaknusIDBridge && typeof win.BaknusIDBridge.postMessage === 'function') {
+      try {
+        win.BaknusIDBridge.postMessage(JSON.stringify(payload));
+      } catch (e) {
+        console.error("[BaknusIDBridge] Error postMessage EXIT_GAME:", e);
+      }
+    }
+    if (win.flutter_inappwebview && typeof win.flutter_inappwebview.callHandler === 'function') {
+      try {
+        win.flutter_inappwebview.callHandler('BaknusIDBridge', payload);
+      } catch (e) {
+        console.error("[BaknusIDBridge] Error flutter_inappwebview EXIT_GAME:", e);
+      }
+    }
+
+    if (this.onExitGame) {
+      this.onExitGame();
+    }
   }
 
   /**
@@ -1544,32 +1646,14 @@ export class GameScene extends Phaser.Scene {
       sounds.stopBgm();
       this.updateLeaderboard();
 
-      // Hitung mundur 6 detik otomatis kembali ke Lobi (Pilih Room)
-      let remainSec = 6;
+      // Hentikan timer otomatis agar pemain tetap berada di tampilan Game Over sampai memilih opsi
       if (this.elimCountdownText) {
-        this.elimCountdownText.setText(`Otomatis kembali ke Lobi dalam ${remainSec} detik...`);
+        this.elimCountdownText.setText("");
       }
       if (this.eliminatedTimer) {
         clearInterval(this.eliminatedTimer);
+        this.eliminatedTimer = null;
       }
-      this.eliminatedTimer = setInterval(() => {
-        remainSec--;
-        if (this.elimCountdownText) {
-          this.elimCountdownText.setText(`Otomatis kembali ke Lobi dalam ${Math.max(0, remainSec)} detik...`);
-        }
-        if (remainSec <= 0) {
-          if (this.eliminatedTimer) {
-            clearInterval(this.eliminatedTimer);
-            this.eliminatedTimer = null;
-          }
-          if (this.eliminatedModal.visible) {
-            this.eliminatedModal.setVisible(false);
-            if (this.onReturnToLobby) {
-              this.onReturnToLobby();
-            }
-          }
-        }
-      }, 1000);
     });
 
     this.room.onMessage("bomb_exploded", (data: any) => {

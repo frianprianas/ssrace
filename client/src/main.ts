@@ -627,6 +627,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const joinRoom = async (roomNumber: number) => {
     if (!currentAuthData) return;
+    sounds.resumeFromExit();
     selectedRoomNumber = roomNumber;
     stopBriefingTypewriter();
 
@@ -669,6 +670,26 @@ window.addEventListener("DOMContentLoaded", () => {
           scene.cleanupEntities();
           showLobby(true);
           fetchRooms();
+        };
+
+        // Pasang callback saat pemain memilih KELUAR DARI GAME (hentikan musik total)
+        scene.onExitGame = () => {
+          sounds.exitGame();
+          if (btnBgm) {
+            btnBgm.innerText = "🔇 BGM: OFF";
+            btnBgm.style.opacity = "0.6";
+          }
+          if (modalHangar) modalHangar.style.display = "none";
+          if (touchControls) touchControls.style.display = "none";
+          if (modalLobby) modalLobby.style.display = "none";
+          if (modalLeaderboard) modalLeaderboard.style.display = "none";
+          if (btnChangeRoom) btnChangeRoom.style.display = "none";
+          if (activeColyseusRoom) {
+            try { activeColyseusRoom.leave(); } catch (e) {}
+            activeColyseusRoom = null;
+          }
+          scene.cleanupEntities();
+          showModal(true);
         };
 
         if (hangarSectorBadge) {
@@ -753,7 +774,12 @@ window.addEventListener("DOMContentLoaded", () => {
   if (formLogin) {
     formLogin.addEventListener("submit", async (e) => {
       e.preventDefault();
+      sounds.resumeFromExit();
       sounds.unlockAudio();
+      if (btnBgm) {
+        btnBgm.innerText = "🎵 BGM: ON";
+        btnBgm.style.opacity = "1";
+      }
       loginError.style.display = "none";
       btnSubmit.disabled = true;
       btnSubmit.innerText = "⏳ MEMVERIFIKASI AKUN...";
@@ -810,15 +836,23 @@ window.addEventListener("DOMContentLoaded", () => {
       currentAuthData = null;
       if (sessionInfo) sessionInfo.style.display = "none";
       if (modalLobby) modalLobby.style.display = "none";
+      if (btnChangeRoom) btnChangeRoom.style.display = "none";
       const scene = game.scene.getScene("GameScene") as GameScene;
-      if (scene) scene.cleanupEntities();
+      if (scene) {
+        scene.triggerExitGame();
+      } else {
+        sounds.exitGame();
+      }
       showModal(true);
     });
   }
 
   // Tombol Buka Modal Login
   if (btnOpenLogin) {
-    btnOpenLogin.addEventListener("click", () => showModal(true));
+    btnOpenLogin.addEventListener("click", () => {
+      sounds.resumeFromExit();
+      showModal(true);
+    });
   }
 
   // ==========================================

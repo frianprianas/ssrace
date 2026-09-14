@@ -4,6 +4,7 @@ class SoundManager {
   private ctx: AudioContext | null = null;
   public sfxEnabled: boolean = true;
   public bgmEnabled: boolean = true;
+  public isGameExited: boolean = false;
   private isBgmPlaying: boolean = false;
   private bgmTimer: number | null = null;
   private currentStep: number = 0;
@@ -11,6 +12,7 @@ class SoundManager {
   private bgmGain: GainNode | null = null;
 
   private initCtx() {
+    if (this.isGameExited) return;
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
@@ -27,6 +29,7 @@ class SoundManager {
   }
 
   public unlockAudio() {
+    if (this.isGameExited) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -49,7 +52,7 @@ class SoundManager {
   // 🎵 PROCEDURAL RETRO SYNTHWAVE BGM ENGINE
   // ==========================================
   startBgm() {
-    if (this.isBgmPlaying || !this.bgmEnabled) return;
+    if (this.isGameExited || this.isBgmPlaying || !this.bgmEnabled) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -58,7 +61,7 @@ class SoundManager {
     const stepDurationMs = (60 / this.tempo / 4) * 1000; // 16th note
 
     this.bgmTimer = window.setInterval(() => {
-      if (!this.isBgmPlaying || !this.ctx) return;
+      if (this.isGameExited || !this.isBgmPlaying || !this.ctx) return;
       this.playBgmStep(this.currentStep);
       this.currentStep = (this.currentStep + 1) % 32; // 2 bar loop
     }, stepDurationMs);
@@ -72,7 +75,40 @@ class SoundManager {
     }
   }
 
+  /**
+   * Menghentikan musik dan seluruh audio secara total saat keluar dari game.
+   * AudioContext di-suspend dan flag isGameExited diset true sehingga
+   * sentuhan/klik pengguna selanjutnya tidak akan memicu musik kembali.
+   */
+  exitGame() {
+    this.isGameExited = true;
+    this.bgmEnabled = false;
+    this.stopBgm();
+    if (this.ctx && this.ctx.state === "running") {
+      try {
+        this.ctx.suspend();
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * Mengaktifkan kembali audio ketika pemain masuk/memulai game baru lagi.
+   */
+  resumeFromExit() {
+    this.isGameExited = false;
+    this.bgmEnabled = true;
+    if (this.ctx && this.ctx.state === "suspended") {
+      try {
+        this.ctx.resume();
+      } catch (e) {}
+    }
+  }
+
   toggleBgm(): boolean {
+    if (this.isGameExited) {
+      this.isGameExited = false;
+      this.bgmEnabled = false;
+    }
     this.bgmEnabled = !this.bgmEnabled;
     if (this.bgmEnabled) {
       this.startBgm();
