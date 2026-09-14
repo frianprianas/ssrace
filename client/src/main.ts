@@ -702,7 +702,20 @@ window.addEventListener("DOMContentLoaded", () => {
         renderHangarCards();
 
         activeColyseusRoom.state.onChange(() => {
+          // JANGAN PERNAH buka modal Hangar jika pemain sedang di tampilan Game Over!
+          if (scene && (scene.isGameOverActive || (scene as any).eliminatedModal?.visible)) {
+            if (modalHangar) modalHangar.style.display = "none";
+            if (touchControls) touchControls.style.display = "none";
+            return;
+          }
+
           const myPlayer = activeColyseusRoom.state.players.get(activeColyseusRoom.sessionId);
+          if (myPlayer && myPlayer.isEliminated) {
+            if (modalHangar) modalHangar.style.display = "none";
+            if (touchControls) touchControls.style.display = "none";
+            return;
+          }
+
           const hasChosenChar = myPlayer && myPlayer.characterId >= 0;
 
           // Selama status waiting atau pemain belum pilih karakter, tetap di Hangar!
@@ -717,10 +730,17 @@ window.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-        activeColyseusRoom.state.players.onAdd(() => renderHangarCards());
-        activeColyseusRoom.state.players.onRemove(() => renderHangarCards());
+        activeColyseusRoom.state.players.onAdd(() => {
+          if (scene && (scene.isGameOverActive || (scene as any).eliminatedModal?.visible)) return;
+          renderHangarCards();
+        });
+        activeColyseusRoom.state.players.onRemove(() => {
+          if (scene && (scene.isGameOverActive || (scene as any).eliminatedModal?.visible)) return;
+          renderHangarCards();
+        });
 
         activeColyseusRoom.onMessage("character_selected", () => {
+          if (scene && (scene.isGameOverActive || (scene as any).eliminatedModal?.visible)) return;
           renderHangarCards();
         });
 

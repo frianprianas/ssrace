@@ -104,6 +104,7 @@ export class GameScene extends Phaser.Scene {
   private modalSub!: Phaser.GameObjects.Text;
   public onReturnToLobby?: () => void;
   public onExitGame?: () => void;
+  public isGameOverActive: boolean = false;
 
   // Elimination / Game Over Modal
   private eliminatedModal!: Phaser.GameObjects.Container;
@@ -713,6 +714,7 @@ export class GameScene extends Phaser.Scene {
 
     const hitZoneLobby = this.add.zone(0, 27, 290, 42).setInteractive({ cursor: "pointer" });
     hitZoneLobby.on("pointerdown", () => {
+      this.isGameOverActive = false;
       this.eliminatedModal.setVisible(false);
       if (this.eliminatedTimer) {
         clearInterval(this.eliminatedTimer);
@@ -744,6 +746,7 @@ export class GameScene extends Phaser.Scene {
 
     const hitZoneExit = this.add.zone(0, 79, 290, 42).setInteractive({ cursor: "pointer" });
     hitZoneExit.on("pointerdown", () => {
+      this.isGameOverActive = false;
       this.triggerExitGame();
     });
     this.eliminatedModal.add(hitZoneExit);
@@ -793,6 +796,7 @@ export class GameScene extends Phaser.Scene {
    * 4. Panggil onExitGame callback untuk kembali ke menu awal di browser
    */
   public triggerExitGame() {
+    this.isGameOverActive = false;
     sounds.exitGame();
     if (this.eliminatedTimer) {
       clearInterval(this.eliminatedTimer);
@@ -1090,6 +1094,7 @@ export class GameScene extends Phaser.Scene {
     if (this.eliminatedModal) {
       this.eliminatedModal.setVisible(false);
     }
+    this.isGameOverActive = false;
   }
 
   async connectToServer(authOptions: { serverUrl?: string; email?: string; password?: string; token?: string; roomNumber?: number }) {
@@ -1619,6 +1624,12 @@ export class GameScene extends Phaser.Scene {
 
     // Khusus untuk pemain ini jika tereliminasi (seluruh 3 nyawa habis)
     this.room.onMessage("you_are_eliminated", (data: any) => {
+      this.isGameOverActive = true;
+      const modalHangar = document.getElementById("hangar-modal");
+      if (modalHangar) modalHangar.style.display = "none";
+      const touchControls = document.getElementById("touch-controls");
+      if (touchControls) touchControls.style.display = "none";
+
       sounds.playExplosion(true);
       sounds.playGameOver();
       this.cameras.main.shake(450, 0.05);
@@ -1661,6 +1672,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("game_over", (data: any) => {
+      // Jika pemain sudah tereliminasi dan sedang melihat modal Game Over pribadi,
+      // jangan tertimpa oleh modal selesai pertandingan
+      if (this.isGameOverActive || (this.eliminatedModal && this.eliminatedModal.visible)) {
+        return;
+      }
       sounds.playGameOver();
       this.lastIsVictory = Boolean(data && data.isVictory);
       if (this.room) {
@@ -1682,6 +1698,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.room.onMessage("return_to_lobby", () => {
+      // Jika pemain sedang berada di tampilan Game Over (kalah/tereliminasi),
+      // JANGAN paksa kembali ke lobby! Biarkan pemain memilih sendiri opsinya.
+      if (this.isGameOverActive || (this.eliminatedModal && this.eliminatedModal.visible)) {
+        return;
+      }
       this.modalContainer.setVisible(false);
       if (this.onReturnToLobby) {
         this.onReturnToLobby();
